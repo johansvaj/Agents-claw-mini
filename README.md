@@ -239,4 +239,4 @@ MIT License - see [LICENSE](LICENSE) file
 
 ---
 
-Made with ⚡ by the Agents Claw Mini Team
+Made with ⚡ by the Agents Claw Mini mr.jr
