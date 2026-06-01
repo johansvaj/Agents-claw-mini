@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-🤖⚡ Agents Claw Mini v11.0 - AI Terminal Controller via Telegram
-Redesigned: Modern UI, full settings, dashboard, integrations
+🤖⚡ Agents Claw Mini v11.3 - AI Terminal Controller via Telegram
++ OS Detector + File Manager + AI File Agent
 """
 
 import os
@@ -13,6 +13,9 @@ import re
 import sys
 import signal
 import traceback
+import platform
+import socket
+import shutil
 from pathlib import Path
 
 CONFIG_FILE = os.path.expanduser("~/.claw_config.json")
@@ -71,10 +74,609 @@ def header():
         "",
         box_top(52),
         box_mid("🤖⚡  A G E N T S   C L A W   M I N I  ⚡🤖", 52, "center", "Y"),
-        box_mid("AI Terminal Controller via Telegram v11.0", 52, "center", "d"),
+        box_mid("AI Terminal Controller via Telegram v11.3", 52, "center", "d"),
         box_bot(52),
         "",
     ])
+
+# ── OS DETECTOR ──
+class OSDetector:
+    """Deteksi OS untuk terminal"""
+    
+    def __init__(self):
+        self.info = self._detect()
+    
+    def _detect(self):
+        info = {
+            "system": platform.system(),
+            "release": platform.release(),
+            "version": platform.version(),
+            "platform": platform.platform(),
+            "machine": platform.machine(),
+            "processor": platform.processor() or "Unknown",
+            "hostname": socket.gethostname(),
+            "username": os.environ.get("USER") or os.environ.get("USERNAME") or "unknown",
+            "home": os.path.expanduser("~"),
+            "shell": os.environ.get("SHELL", os.environ.get("COMSPEC", "unknown")),
+            "terminal": os.environ.get("TERM", "unknown"),
+            "python": platform.python_version(),
+        }
+        
+        if info["system"] == "Linux":
+            try:
+                with open("/etc/os-release") as f:
+                    for line in f:
+                        if line.startswith("PRETTY_NAME="):
+                            info["distro"] = line.split("=")[1].strip().strip('"')
+                            break
+            except:
+                info["distro"] = "Unknown Linux"
+        else:
+            info["distro"] = info["system"]
+        
+        info["is_wsl"] = False
+        try:
+            with open("/proc/version") as f:
+                if "microsoft" in f.read().lower():
+                    info["is_wsl"] = True
+        except:
+            pass
+        
+        info["is_termux"] = os.environ.get("TERMUX_VERSION") is not None
+        info["is_docker"] = os.path.exists("/.dockerenv")
+        info["package_managers"] = self._detect_package_manager()
+        
+        return info
+    
+    def _detect_package_manager(self):
+        managers = []
+        cmds = {
+            "apt": "apt (Debian/Ubuntu)",
+            "yum": "yum (RHEL)",
+            "dnf": "dnf (Fedora)",
+            "pacman": "pacman (Arch)",
+            "zypper": "zypper (openSUSE)",
+            "apk": "apk (Alpine)",
+            "brew": "brew (macOS)",
+            "pkg": "pkg (Termux)",
+            "choco": "choco (Windows)",
+            "winget": "winget (Windows)",
+        }
+        for cmd, name in cmds.items():
+            if os.system(f"which {cmd} >/dev/null 2>&1") == 0:
+                managers.append(name)
+        return managers if managers else ["Tidak terdeteksi"]
+    
+    def get_summary(self):
+        parts = [self.info["distro"]]
+        if self.info["is_wsl"]:
+            parts.append("(WSL)")
+        if self.info["is_termux"]:
+            parts.append("(Termux)")
+        if self.info["is_docker"]:
+            parts.append("(Docker)")
+        return " ".join(parts)
+    
+    def get_os_line(self):
+        return self.get_summary()
+    
+    def save_to_config(self):
+        cfg = load_cfg()
+        cfg["os_info"] = self.info
+        cfg["os_summary"] = self.get_summary()
+        cfg["os_detected"] = True
+        save_cfg(cfg)
+    
+    def get_ai_context(self):
+        i = self.info
+        pm = ", ".join(i["package_managers"])
+        return f"""[SYSTEM: {self.get_summary()} | Shell: {i['shell']} | PM: {pm}]"""
+
+def get_os_detector():
+    return OSDetector()
+
+# ── FILE MANAGER ──
+class FileManager:
+    """Manajemen file dan folder"""
+    
+    def __init__(self, base_path=None):
+        self.base_path = base_path or os.getcwd()
+        self.current_path = os.path.expanduser(self.base_path)
+    
+    def set_path(self, path):
+        expanded = os.path.expanduser(path)
+        if os.path.exists(expanded) and os.path.isdir(expanded):
+            self.current_path = os.path.abspath(expanded)
+            return True
+        return False
+    
+    def list_items(self, path=None):
+        target = path or self.current_path
+        target = os.path.expanduser(target)
+        
+        if not os.path.exists(target):
+            return None, "Path tidak ditemukan!"
+        
+        try:
+            items = []
+            with os.scandir(target) as entries:
+                for entry in entries:
+                    item_type = "📁" if entry.is_dir() else "📄"
+                    size = ""
+                    if entry.is_file():
+                        try:
+                            sz = entry.stat().st_size
+                            if sz < 1024:
+                                size = f"{sz}B"
+                            elif sz < 1024*1024:
+                                size = f"{sz/1024:.1f}KB"
+                            else:
+                                size = f"{sz/(1024*1024):.1f}MB"
+                        except:
+                            size = "?"
+                    items.append({
+                        "name": entry.name,
+                        "type": "folder" if entry.is_dir() else "file",
+                        "icon": item_type,
+                        "size": size,
+                        "path": entry.path
+                    })
+            
+            items.sort(key=lambda x: (0 if x["type"] == "folder" else 1, x["name"].lower()))
+            return items, None
+            
+        except PermissionError:
+            return None, "Akses ditolak!"
+        except Exception as e:
+            return None, str(e)
+    
+    def create_file(self, filename, content=""):
+        filepath = os.path.join(self.current_path, filename)
+        try:
+            with open(filepath, 'w') as f:
+                f.write(content)
+            return True, f"File '{filename}' berhasil dibuat!"
+        except Exception as e:
+            return False, str(e)
+    
+    def create_folder(self, foldername):
+        folderpath = os.path.join(self.current_path, foldername)
+        try:
+            os.makedirs(folderpath, exist_ok=True)
+            return True, f"Folder '{foldername}' berhasil dibuat!"
+        except Exception as e:
+            return False, str(e)
+    
+    def delete_item(self, name):
+        target = os.path.join(self.current_path, name)
+        
+        if not os.path.exists(target):
+            return False, f"'{name}' tidak ditemukan!"
+        
+        try:
+            if os.path.isfile(target):
+                os.remove(target)
+                return True, f"File '{name}' berhasil dihapus!"
+            elif os.path.isdir(target):
+                shutil.rmtree(target)
+                return True, f"Folder '{name}' berhasil dihapus!"
+        except Exception as e:
+            return False, str(e)
+    
+    def read_file(self, filename):
+        filepath = os.path.join(self.current_path, filename)
+        if not os.path.isfile(filepath):
+            return None, "Bukan file atau tidak ditemukan!"
+        
+        try:
+            with open(filepath, 'r') as f:
+                return f.read(), None
+        except Exception as e:
+            return None, str(e)
+    
+    def write_file(self, filename, content):
+        filepath = os.path.join(self.current_path, filename)
+        try:
+            with open(filepath, 'w') as f:
+                f.write(content)
+            return True, f"File '{filename}' berhasil diupdate!"
+        except Exception as e:
+            return False, str(e)
+    
+    def get_path_display(self):
+        home = os.path.expanduser("~")
+        path = self.current_path
+        if path.startswith(home):
+            path = "~" + path[len(home):]
+        return path
+
+# ── AI FILE AGENT (NEW) ──
+class AIFileAgent:
+    """AI Agent untuk mengelola file via perintah natural language"""
+    
+    def __init__(self):
+        self.fm = FileManager()
+        self.os_detector = get_os_detector()
+    
+    def parse_command(self, user_input):
+        """Parse perintah natural language ke aksi file"""
+        text = user_input.lower().strip()
+        
+        # ── BUAT FILE ──
+        patterns_create_file = [
+            r'buat(?:kan)?\s+file\s+([^\s]+)(?:\s+dengan\s+isi\s+)?(.*)?',
+            r'create\s+file\s+([^\s]+)(?:\s+with\s+content\s+)?(.*)?',
+            r'tulis\s+file\s+([^\s]+)',
+            r'new\s+file\s+([^\s]+)',
+            r'bikin\s+file\s+([^\s]+)',
+        ]
+        
+        for pattern in patterns_create_file:
+            match = re.search(pattern, text)
+            if match:
+                filename = match.group(1).strip()
+                content = match.group(2).strip() if match.group(2) else ""
+                return {
+                    "action": "create_file",
+                    "filename": filename,
+                    "content": content
+                }
+        
+        # ── BUAT FOLDER ──
+        patterns_create_folder = [
+            r'buat(?:kan)?\s+folder\s+([^\s]+)',
+            r'create\s+folder\s+([^\s]+)',
+            r'new\s+folder\s+([^\s]+)',
+            r'bikin\s+folder\s+([^\s]+)',
+            r'buat(?:kan)?\s+direktori\s+([^\s]+)',
+            r'mkdir\s+([^\s]+)',
+        ]
+        
+        for pattern in patterns_create_folder:
+            match = re.search(pattern, text)
+            if match:
+                return {
+                    "action": "create_folder",
+                    "foldername": match.group(1).strip()
+                }
+        
+        # ── HAPUS FILE/FOLDER ──
+        patterns_delete = [
+            r'hapus\s+file\s+([^\s]+)',
+            r'delete\s+file\s+([^\s]+)',
+            r'remove\s+file\s+([^\s]+)',
+            r'hapus\s+folder\s+([^\s]+)',
+            r'delete\s+folder\s+([^\s]+)',
+            r'remove\s+folder\s+([^\s]+)',
+            r'hapus\s+direktori\s+([^\s]+)',
+            r'hapus\s+([^\s]+)',
+            r'delete\s+([^\s]+)',
+            r'remove\s+([^\s]+)',
+            r'rm\s+([^\s]+)',
+            r'rmdir\s+([^\s]+)',
+        ]
+        
+        for pattern in patterns_delete:
+            match = re.search(pattern, text)
+            if match:
+                target = match.group(1).strip()
+                # Deteksi apakah file atau folder
+                target_path = os.path.join(self.fm.current_path, target)
+                item_type = "folder" if os.path.isdir(target_path) else "file"
+                return {
+                    "action": "delete",
+                    "target": target,
+                    "type": item_type
+                }
+        
+        # ── BACA FILE ──
+        patterns_read = [
+            r'baca\s+file\s+([^\s]+)',
+            r'read\s+file\s+([^\s]+)',
+            r'lihat\s+file\s+([^\s]+)',
+            r'cat\s+([^\s]+)',
+            r'show\s+file\s+([^\s]+)',
+        ]
+        
+        for pattern in patterns_read:
+            match = re.search(pattern, text)
+            if match:
+                return {
+                    "action": "read",
+                    "filename": match.group(1).strip()
+                }
+        
+        # ── LIST/TAMPILKAN ──
+        patterns_list = [
+            r'list\s+folder',
+            r'lihat\s+folder',
+            r'tampilkan\s+isi',
+            r'show\s+contents',
+            r'ls',
+            r'dir',
+            r'apa\s+isi\s+folder',
+        ]
+        
+        for pattern in patterns_list:
+            if re.search(pattern, text):
+                return {
+                    "action": "list"
+                }
+        
+        # ── PINDAH DIREKTORI ──
+        patterns_cd = [
+            r'pindah\s+ke\s+([^\s]+)',
+            r'cd\s+([^\s]+)',
+            r'go\s+to\s+([^\s]+)',
+            r'change\s+dir\s+([^\s]+)',
+            r'buka\s+folder\s+([^\s]+)',
+        ]
+        
+        for pattern in patterns_cd:
+            match = re.search(pattern, text)
+            if match:
+                return {
+                    "action": "change_path",
+                    "path": match.group(1).strip()
+                }
+        
+        # ── EDIT/TULIS ULANG ──
+        patterns_edit = [
+            r'edit\s+file\s+([^\s]+)(?:\s+jadi\s+)?(.*)?',
+            r'update\s+file\s+([^\s]+)(?:\s+with\s+)?(.*)?',
+            r'ubah\s+file\s+([^\s]+)(?:\s+menjadi\s+)?(.*)?',
+        ]
+        
+        for pattern in patterns_edit:
+            match = re.search(pattern, text)
+            if match:
+                return {
+                    "action": "write",
+                    "filename": match.group(1).strip(),
+                    "content": match.group(2).strip() if match.group(2) else ""
+                }
+        
+        return None
+    
+    def execute(self, parsed):
+        """Eksekusi perintah yang sudah di-parse"""
+        action = parsed["action"]
+        
+        if action == "create_file":
+            return self.fm.create_file(parsed["filename"], parsed.get("content", ""))
+        
+        elif action == "create_folder":
+            return self.fm.create_folder(parsed["foldername"])
+        
+        elif action == "delete":
+            return self.fm.delete_item(parsed["target"])
+        
+        elif action == "read":
+            content, error = self.fm.read_file(parsed["filename"])
+            if error:
+                return False, error
+            return True, content
+        
+        elif action == "list":
+            items, error = self.fm.list_items()
+            if error:
+                return False, error
+            result = f"📂 {self.fm.get_path_display()}\n"
+            for item in items:
+                size_info = f" ({item['size']})" if item['size'] else ""
+                result += f"  {item['icon']} {item['name']}{size_info}\n"
+            return True, result
+        
+        elif action == "change_path":
+            success = self.fm.set_path(parsed["path"])
+            if success:
+                return True, f"📂 Sekarang di: {self.fm.get_path_display()}"
+            return False, "Path tidak ditemukan!"
+        
+        elif action == "write":
+            return self.fm.write_file(parsed["filename"], parsed.get("content", ""))
+        
+        return False, "Aksi tidak dikenali"
+    
+    def chat(self, user_input):
+        """Proses input user dan eksekusi"""
+        parsed = self.parse_command(user_input)
+        
+        if not parsed:
+            # Bukan perintah file, berikan bantuan
+            return None, f"""🤖 Saya tidak mengerti perintah file tersebut.
+
+Perintah yang bisa saya lakukan:
+  📄 Buat File    : "buat file test.txt dengan isi halo"
+  📁 Buat Folder  : "buat folder projects" / "mkdir myfolder"
+  🗑️  Hapus        : "hapus file test.txt" / "delete folder old"
+  📖 Baca File     : "baca file test.txt" / "cat readme.md"
+  📂 List Isi      : "list folder" / "ls"
+  📍 Pindah Path   : "pindah ke ~/Documents" / "cd .."
+  ✏️  Edit File     : "edit file test.txt jadi hello world"
+
+Path aktif: {self.fm.get_path_display()}"""
+        
+        # Eksekusi perintah
+        success, result = self.execute(parsed)
+        return success, result
+
+def ai_file_agent_screen():
+    """Layar AI File Agent - Chat dengan AI untuk kelola file"""
+    agent = AIFileAgent()
+    
+    clear(); print(header())
+    print(box_top(52, "🤖 AI FILE AGENT"))
+    print(box_mid(""))
+    print(box_mid("AI bisa buat, hapus, baca file & folder!", 52, "center", "Y"))
+    print(box_mid("Ketik perintah natural language", 52, "center", "d"))
+    print(box_mid("Contoh: 'buat file test.txt'", 52, "center", "d"))
+    print(box_mid("        'hapus folder lama'", 52, "center", "d"))
+    print(box_mid("        'baca file readme.md'", 52, "center", "d"))
+    print(box_mid(""))
+    print(box_bot(52))
+    
+    while True:
+        print(c("C") + f"\n  📂 {agent.fm.get_path_display()}" + c("r"))
+        user_input = input(c("G") + "  Kamu ➤ " + c("r")).strip()
+        
+        if user_input.lower() in ["/back", "/exit", "/quit", "exit", "quit"]:
+            break
+        
+        if not user_input:
+            continue
+        
+        print(c("d") + "  🤖 AI sedang memproses..." + c("r"))
+        time.sleep(0.5)
+        
+        success, result = agent.chat(user_input)
+        
+        if success is None:
+            # Bukan perintah file, tampilkan bantuan
+            print(c("Y") + "\n  💡 BANTUAN:" + c("r"))
+            print(c("W") + result + c("r"))
+        elif success:
+            print(c("G") + "\n  ✅ BERHASIL:" + c("r"))
+            print(c("W") + result + c("r"))
+        else:
+            print(c("R") + "\n  ❌ GAGAL:" + c("r"))
+            print(c("W") + result + c("r"))
+        
+        print()
+
+def file_manager_screen():
+    """Layar File Manager Manual"""
+    fm = FileManager()
+    
+    while True:
+        clear(); print(header())
+        print(box_top(52, "📁 FILE MANAGER"))
+        print(box_mid(""))
+        print(box_mid("📂 " + fm.get_path_display(), 52))
+        print(box_mid(""))
+        print(box_sep(52))
+        
+        items, error = fm.list_items()
+        
+        if error:
+            print(box_mid(c("R") + "❌ " + error + c("r"), 52))
+        elif items:
+            for i, item in enumerate(items[:10], 1):
+                display = f"{item['icon']} {item['name'][:30]}"
+                if item['size']:
+                    display += f" ({item['size']})"
+                print(box_mid(f"[{i}] {display}", 52))
+            
+            if len(items) > 10:
+                print(box_mid(f"... dan {len(items)-10} item lainnya", 52, "center", "d"))
+        else:
+            print(box_mid("(kosong)", 52, "center", "d"))
+        
+        print(box_mid(""))
+        print(box_sep(52))
+        print(box_mid("[c] Create File    [d] Delete Item", 52))
+        print(box_mid("[n] New Folder     [r] Read File", 52))
+        print(box_mid("[w] Write File     [p] Change Path", 52))
+        print(box_mid("[0] Back", 52))
+        print(box_bot(52))
+        
+        p = input("\n    ➤ ").strip().lower()
+        
+        if p == "0":
+            break
+        
+        elif p == "c":
+            filename = input("    Nama file: ").strip()
+            if filename:
+                print("    Isi file (Enter 2x = selesai):")
+                lines = []
+                while True:
+                    line = input("    > ")
+                    if line == "" and len(lines) > 0 and lines[-1] == "":
+                        lines.pop()
+                        break
+                    lines.append(line)
+                content = '\n'.join(lines)
+                ok, msg = fm.create_file(filename, content)
+                print(c("G" if ok else "R") + "    " + msg + c("r"))
+                time.sleep(1)
+        
+        elif p == "n":
+            foldername = input("    Nama folder: ").strip()
+            if foldername:
+                ok, msg = fm.create_folder(foldername)
+                print(c("G" if ok else "R") + "    " + msg + c("r"))
+                time.sleep(1)
+        
+        elif p == "d":
+            name = input("    Nama file/folder yang dihapus: ").strip()
+            if name:
+                confirm = input("    Yakin hapus? (y/n): ").strip().lower()
+                if confirm == 'y':
+                    ok, msg = fm.delete_item(name)
+                    print(c("G" if ok else "R") + "    " + msg + c("r"))
+                    time.sleep(1)
+        
+        elif p == "r":
+            filename = input("    Nama file: ").strip()
+            if filename:
+                content, error = fm.read_file(filename)
+                if error:
+                    print(c("R") + "    ❌ " + error + c("r"))
+                else:
+                    print(box_top(52, f"📄 {filename}"))
+                    lines = content.split('\n')[:15]
+                    for line in lines:
+                        print(box_mid("  " + line[:48], 52))
+                    if len(content.split('\n')) > 15:
+                        print(box_mid("  ... (truncated)", 52, "center", "d"))
+                    print(box_bot(52))
+                input("\n    Press Enter...")
+        
+        elif p == "w":
+            filename = input("    Nama file: ").strip()
+            if filename:
+                print("    Masukkan isi file (Enter 2x = selesai):")
+                lines = []
+                while True:
+                    line = input("    > ")
+                    if line == "" and len(lines) > 0 and lines[-1] == "":
+                        lines.pop()
+                        break
+                    lines.append(line)
+                content = '\n'.join(lines)
+                ok, msg = fm.write_file(filename, content)
+                print(c("G" if ok else "R") + "    " + msg + c("r"))
+                time.sleep(1)
+        
+        elif p == "p":
+            new_path = input("    Path baru (~/ untuk home): ").strip()
+            if new_path:
+                if fm.set_path(new_path):
+                    print(c("G") + "    ✅ Path diubah!" + c("r"))
+                else:
+                    print(c("R") + "    ❌ Path tidak valid!" + c("r"))
+                time.sleep(1)
+        
+        elif p.isdigit() and items:
+            idx = int(p) - 1
+            if 0 <= idx < len(items):
+                item = items[idx]
+                if item["type"] == "folder":
+                    fm.set_path(item["path"])
+                else:
+                    print(box_top(52, f"📄 {item['name']}"))
+                    content, error = fm.read_file(item["name"])
+                    if error:
+                        print(box_mid("❌ " + error, 52))
+                    else:
+                        lines = content.split('\n')[:15]
+                        for line in lines:
+                            print(box_mid("  " + line[:48], 52))
+                        if len(content.split('\n')) > 15:
+                            print(box_mid("  ... (truncated)", 52, "center", "d"))
+                    print(box_bot(52))
+                    input("\n    Press Enter...")
 
 # ── MODELS ──
 ALL_MODELS = {
@@ -142,7 +744,8 @@ def load_cfg():
         "admin_id": "", "temperature": 0.7, "max_tokens": 4096,
         "context_window": "auto", "performance": "balanced",
         "fallback_model": "deepseek_chat", "base_url": "",
-        "org_id": "", "integrations": []
+        "org_id": "", "integrations": [],
+        "os_detected": False, "os_summary": "", "os_info": {}
     }
 
 def save_cfg(cfg):
@@ -155,13 +758,17 @@ def save_cfg(cfg):
 def dashboard():
     cfg = load_cfg()
     m = ALL_MODELS.get(cfg.get("model", "deepseek_chat"), {})
-    clear(); print(header())
+    os_detector = get_os_detector()
+    os_detector.save_to_config()
+    os_line = os_detector.get_os_line()
     
+    clear(); print(header())
     print(box_top(52, "📊 DASHBOARD"))
     print(box_mid(""))
     print(box_mid("🤖 Model:    " + m.get("icon","") + " " + m.get("name","Not Set"), 52))
     print(box_mid("🌐 Provider: " + m.get("provider","?"), 52))
     print(box_mid("🔑 API:      " + ("💻 Local" if m.get("local") else "🌐 OpenRouter"), 52))
+    print(box_mid("🖥️  OS:       " + os_line[:35], 52))
     print(box_mid(""))
     print(box_sep(52))
     print(box_mid("📈 Stats", 52))
@@ -172,14 +779,67 @@ def dashboard():
     input("\n    Press Enter...")
 
 def chat_screen():
+    cfg = load_cfg()
+    os_detector = get_os_detector()
+    
     clear(); print(header())
     print(box_top(52, "💬 CHAT"))
     print(box_mid(""))
-    print(box_mid("Chat history will appear here...", 52, "center", "d"))
+    print(box_mid("OS Terdeteksi: " + os_detector.get_summary(), 52, "center", "G"))
+    print(box_mid("Konteks OS akan dikirim ke AI otomatis", 52, "center", "d"))
     print(box_mid(""))
     print(box_bot(52))
     print("\n    " + c("d") + "Type /back to return to menu" + c("r"))
-    input("\n    ➤ ")
+    print("    " + c("d") + "Type /os to show OS info" + c("r"))
+    
+    while True:
+        user_input = input("\n    ➤ ").strip()
+        if user_input.lower() == "/back":
+            break
+        elif user_input.lower() == "/os":
+            os_screen()
+            break
+        elif user_input:
+            ai_context = os_detector.get_ai_context()
+            print(c("d") + "\n    [AI Context: " + ai_context + "]" + c("r"))
+            print(c("G") + "    ✅ Pesan dikirim dengan konteks OS!" + c("r"))
+
+def os_screen():
+    os_detector = get_os_detector()
+    os_detector.save_to_config()
+    i = os_detector.info
+    
+    clear(); print(header())
+    print(box_top(52, "🖥️  OS DETECTOR"))
+    print(box_mid(""))
+    print(box_mid("Sistem Terdeteksi:", 52, "center", "Y"))
+    print(box_mid(""))
+    print(box_mid("  OS:         " + i.get("distro", "?"), 52))
+    print(box_mid("  Platform:   " + i.get("platform", "?")[:35], 52))
+    print(box_mid("  Versi:      " + i.get("release", "?"), 52))
+    print(box_mid("  Arsitektur: " + i.get("machine", "?"), 52))
+    print(box_mid("  Processor:  " + i.get("processor", "?")[:32], 52))
+    print(box_mid(""))
+    print(box_sep(52))
+    print(box_mid("Environment:", 52, "center", "Y"))
+    print(box_mid(""))
+    print(box_mid("  Hostname:   " + i.get("hostname", "?"), 52))
+    print(box_mid("  User:       " + i.get("username", "?"), 52))
+    print(box_mid("  Shell:      " + i.get("shell", "?"), 52))
+    print(box_mid("  Terminal:   " + i.get("terminal", "?"), 52))
+    print(box_mid("  Python:     " + i.get("python", "?"), 52))
+    print(box_mid(""))
+    print(box_sep(52))
+    print(box_mid("Package Manager:", 52, "center", "Y"))
+    print(box_mid(""))
+    for pm in i.get("package_managers", ["Tidak terdeteksi"]):
+        print(box_mid("  • " + pm[:43], 52))
+    print(box_mid(""))
+    print(box_sep(52))
+    print(box_mid("Status: " + os_detector.get_summary(), 52, "center", "G"))
+    print(box_mid("✅ Tersimpan di config", 52, "center", "G"))
+    print(box_bot(52))
+    input("\n    Press Enter...")
 
 def models_screen():
     cfg = load_cfg()
@@ -219,7 +879,6 @@ def models_screen():
             if choice == "0": break
             if choice == "s":
                 mid = input("    Model ID to set: ").strip()
-                # Find model by partial match
                 for key, val in ALL_MODELS.items():
                     if mid.lower() in key.lower() or mid.lower() in val["name"].lower():
                         cfg["model"] = key
@@ -414,8 +1073,8 @@ def updates_screen():
     clear(); print(header())
     print(box_top(52, "🔄 UPDATES"))
     print(box_mid(""))
-    print(box_mid("Current version: v11.0", 52))
-    print(box_mid("Latest version: v11.0", 52))
+    print(box_mid("Current version: v11.3", 52))
+    print(box_mid("Latest version: v11.3", 52))
     print(box_mid("Status: ✅ Up to date", 52))
     print(box_mid(""))
     print(box_bot(52))
@@ -475,7 +1134,7 @@ def about_screen():
     clear(); print(header())
     print(box_top(52, "ℹ️ ABOUT"))
     print(box_mid(""))
-    print(box_mid("Agents Claw Mini v11.0", 52, "center", "Y"))
+    print(box_mid("Agents Claw Mini v11.3", 52, "center", "Y"))
     print(box_mid("AI Terminal Controller", 52, "center"))
     print(box_mid("via Telegram", 52, "center"))
     print(box_mid(""))
@@ -489,6 +1148,9 @@ def about_screen():
 # ── MAIN MENU ──
 
 def main():
+    os_detector = get_os_detector()
+    os_detector.save_to_config()
+    
     while True:
         clear(); print(header())
         print(box_top(52))
@@ -498,7 +1160,12 @@ def main():
         ready = cfg.get("token") != "" and (cfg.get("openrouter_key") != "" or m.get("local", False))
         
         status = c("G") + "● ONLINE" if ready else c("R") + "● OFFLINE"
+        
+        os_summary = cfg.get("os_summary", "Unknown OS")
+        os_icon = "🐧" if "Linux" in os_summary else "🍎" if "Darwin" in os_summary or "macOS" in os_summary else "🪟" if "Windows" in os_summary else "🖥️"
+        
         print(box_mid(status + c("r") + "  " + m.get("icon","") + " " + m.get("name","Not Set"), 52))
+        print(box_mid(os_icon + " " + os_summary[:40], 52, "center", "C"))
         print(box_sep(52))
         
         print(box_mid(menu_item("1", "Dashboard", "System overview"), 52))
@@ -520,11 +1187,14 @@ def main():
         print(box_mid(menu_item("17", "Updates", "Version check"), 52))
         print(box_mid(menu_item("18", "Settings", "Configuration"), 52))
         print(box_mid(menu_item("19", "About", "Information"), 52))
+        print(box_mid(menu_item("20", "OS Info", "Detect system"), 52))
+        print(box_mid(menu_item("21", "File Manager", "Manual file control"), 52))
+        print(box_mid(menu_item("22", "AI File Agent", "AI manages files"), 52))
         print(box_sep(52))
-        print(box_mid(menu_item("20", "Exit", "Close launcher"), 52))
+        print(box_mid(menu_item("23", "Exit", "Close launcher"), 52))
         print(box_bot(52))
         
-        p = input("\n    ➤ Select [1-20]: ").strip()
+        p = input("\n    ➤ Select [1-23]: ").strip()
         
         if p == "1": dashboard()
         elif p == "2": chat_screen()
@@ -545,7 +1215,10 @@ def main():
         elif p == "17": updates_screen()
         elif p == "18": settings_screen()
         elif p == "19": about_screen()
-        elif p == "20":
+        elif p == "20": os_screen()
+        elif p == "21": file_manager_screen()
+        elif p == "22": ai_file_agent_screen()
+        elif p == "23":
             clear(); print(header())
             print(box_top(52))
             print(box_mid("👋 Goodbye!", 52, "center", "G"))
