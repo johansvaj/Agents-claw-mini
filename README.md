@@ -1,5 +1,3 @@
-# Buat file README.md yang baru dan lengkap
-readme_content = """<!-- Banner -->
 <p align="center">
   <img src="https://capsule-render.vercel.app/api?type=waving&color=0:00C9FF,100:92FE9D&height=200&section=header&text=🤖%20AGENTS%20CLAW%20MINI&fontSize=50&fontColor=ffffff&animation=fadeIn&fontAlignY=35" />
 </p>
