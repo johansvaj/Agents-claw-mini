@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Agents Claw Mini v12.0 - AI Terminal Controller via Telegram
+Agents Claw Mini v13.0 - AI Terminal Controller via Telegram
+[UNLOCKED] Full System Access | No Sandbox | Install Tools
 """
 
 import os
@@ -12,6 +13,7 @@ import re
 import shutil
 import threading
 import asyncio
+import subprocess
 from pathlib import Path
 
 try:
@@ -68,7 +70,8 @@ def header():
         "",
         box_top(52),
         box_mid("🤖⚡  A G E N T S   C L A W   M I N I  ⚡🤖", 52, "center", "Y"),
-        box_mid("AI Terminal Controller via Telegram v12.0", 52, "center", "d"),
+        box_mid("AI Terminal Controller via Telegram v13.0", 52, "center", "d"),
+        box_mid("🔓 UNLOCKED | No Sandbox | Full System", 52, "center", "R"),
         box_bot(52),
         "",
     ])
@@ -143,9 +146,10 @@ class OSDetector:
     def _detect_package_manager(self):
         managers = []
         cmds = {
-            "apt": "apt", "yum": "yum", "dnf": "dnf",
+            "apt": "apt", "apt-get": "apt-get", "yum": "yum", "dnf": "dnf",
             "pacman": "pacman", "zypper": "zypper", "apk": "apk",
             "brew": "brew", "pkg": "pkg", "choco": "choco", "winget": "winget",
+            "pip": "pip", "pip3": "pip3", "npm": "npm", "gem": "gem",
         }
         for cmd, name in cmds.items():
             if os.system(f"which {cmd} >/dev/null 2>&1") == 0:
@@ -170,6 +174,170 @@ class OSDetector:
         cfg["os_summary"] = self.get_summary()
         cfg["os_detected"] = True
         save_cfg(cfg)
+
+class SystemExecutor:
+    """Execute system commands without restrictions"""
+    
+    def __init__(self):
+        self.os_detector = OSDetector()
+        self.last_output = ""
+        self.last_error = ""
+    
+    def run(self, command, timeout=300):
+        """Execute any shell command"""
+        try:
+            shell = True
+            if self.os_detector.info["system"] == "Windows":
+                process = subprocess.Popen(
+                    command, shell=True, stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE, text=True, cwd=os.path.expanduser("~")
+                )
+            else:
+                process = subprocess.Popen(
+                    command, shell=True, stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE, text=True, executable="/bin/bash",
+                    cwd=os.path.expanduser("~")
+                )
+            
+            stdout, stderr = process.communicate(timeout=timeout)
+            self.last_output = stdout
+            self.last_error = stderr
+            
+            return {
+                "success": process.returncode == 0,
+                "returncode": process.returncode,
+                "stdout": stdout,
+                "stderr": stderr,
+                "command": command
+            }
+        except subprocess.TimeoutExpired:
+            process.kill()
+            return {
+                "success": False,
+                "returncode": -1,
+                "stdout": self.last_output,
+                "stderr": "Command timed out after " + str(timeout) + "s",
+                "command": command
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "returncode": -1,
+                "stdout": "",
+                "stderr": str(e),
+                "command": command
+            }
+    
+    def run_live(self, command):
+        """Execute and stream output"""
+        output_lines = []
+        try:
+            process = subprocess.Popen(
+                command, shell=True, stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, text=True, bufsize=1,
+                executable="/bin/bash" if self.os_detector.info["system"] != "Windows" else None
+            )
+            
+            for line in iter(process.stdout.readline, ''):
+                line = line.rstrip()
+                output_lines.append(line)
+                print(c("C") + "  > " + line[:48] + c("r"))
+            
+            process.stdout.close()
+            process.wait()
+            
+            return {
+                "success": process.returncode == 0,
+                "output": "\n".join(output_lines),
+                "command": command
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "output": "\n".join(output_lines) + "\nError: " + str(e),
+                "command": command
+            }
+
+class PackageInstaller:
+    """Install tools using detected package manager"""
+    
+    def __init__(self):
+        self.os_detector = OSDetector()
+        self.executor = SystemExecutor()
+        self.pm_commands = {
+            "apt": "apt install -y {package}",
+            "apt-get": "apt-get install -y {package}",
+            "yum": "yum install -y {package}",
+            "dnf": "dnf install -y {package}",
+            "pacman": "pacman -S --noconfirm {package}",
+            "zypper": "zypper install -y {package}",
+            "apk": "apk add {package}",
+            "brew": "brew install {package}",
+            "pkg": "pkg install -y {package}",
+            "choco": "choco install {package} -y",
+            "winget": "winget install {package} --accept-package-agreements --accept-source-agreements",
+            "pip": "pip install {package}",
+            "pip3": "pip3 install {package}",
+            "npm": "npm install -g {package}",
+            "gem": "gem install {package}",
+        }
+    
+    def get_primary_pm(self):
+        managers = self.os_detector.info.get("package_managers", [])
+        priority = ["apt", "apt-get", "dnf", "yum", "pacman", "zypper", "apk", "brew", "pkg", "choco", "winget"]
+        for pm in priority:
+            if pm in managers:
+                return pm
+        return managers[0] if managers else None
+    
+    def install(self, package, pm=None):
+        """Install a package"""
+        if not pm:
+            pm = self.get_primary_pm()
+        
+        if not pm or pm == "unknown":
+            return False, "No package manager detected!"
+        
+        if pm in self.pm_commands:
+            cmd = self.pm_commands[pm].format(package=package)
+            
+            # Auto-sudo for apt/apt-get/dnf/yum/pacman/zypper
+            if pm in ["apt", "apt-get", "dnf", "yum", "pacman", "zypper", "apk"]:
+                cmd = "sudo " + cmd
+            
+            result = self.executor.run(cmd, timeout=600)
+            
+            if result["success"]:
+                return True, f"✅ {package} installed successfully via {pm}\n\nOutput:\n```\n{result['stdout'][:1000]}\n```"
+            else:
+                return False, f"❌ Failed to install {package}\n\nError:\n```\n{result['stderr'][:1000]}\n```\n\nStdout:\n```\n{result['stdout'][:500]}\n```"
+        
+        return False, f"Package manager {pm} not supported"
+    
+    def update_repos(self):
+        """Update package repositories"""
+        pm = self.get_primary_pm()
+        update_cmds = {
+            "apt": "sudo apt update",
+            "apt-get": "sudo apt-get update",
+            "dnf": "sudo dnf check-update",
+            "yum": "sudo yum check-update",
+            "pacman": "sudo pacman -Sy",
+            "zypper": "sudo zypper refresh",
+            "apk": "sudo apk update",
+            "brew": "brew update",
+            "pkg": "pkg update",
+            "choco": "choco upgrade chocolatey",
+            "winget": "winget source update",
+        }
+        
+        if pm in update_cmds:
+            result = self.executor.run(update_cmds[pm], timeout=300)
+            if result["success"]:
+                return True, f"✅ Repositories updated\n\n```\n{result['stdout'][:1000]}\n```"
+            else:
+                return False, f"❌ Update failed\n\n```\n{result['stderr'][:1000]}\n```"
+        return False, "Cannot update: no supported package manager"
 
 class FileManager:
     def __init__(self, base_path=None):
@@ -356,10 +524,113 @@ class AIFileAgent:
 • "cd ~/downloads"
 """
 
+class AISystemAgent:
+    """AI Agent for system commands and tool installation"""
+    
+    def __init__(self):
+        self.executor = SystemExecutor()
+        self.installer = PackageInstaller()
+        self.os_detector = OSDetector()
+    
+    def parse_system_command(self, text):
+        text_lower = text.lower().strip()
+        
+        # Install patterns
+        install_patterns = [
+            r'install\s+([a-zA-Z0-9\-_\+\.]+(?:\s+[a-zA-Z0-9\-_\+\.]+)*)',
+            r'pasang\s+([a-zA-Z0-9\-_\+\.]+(?:\s+[a-zA-Z0-9\-_\+\.]+)*)',
+            r'instal\s+([a-zA-Z0-9\-_\+\.]+(?:\s+[a-zA-Z0-9\-_\+\.]+)*)',
+            r'install\s+tool\s+([a-zA-Z0-9\-_\+\.]+(?:\s+[a-zA-Z0-9\-_\+\.]+)*)',
+            r'pasang\s+tool\s+([a-zA-Z0-9\-_\+\.]+(?:\s+[a-zA-Z0-9\-_\+\.]+)*)',
+            r'apt\s+install\s+([a-zA-Z0-9\-_\+\.]+(?:\s+[a-zA-Z0-9\-_\+\.]+)*)',
+            r'pip\s+install\s+([a-zA-Z0-9\-_\+\.]+(?:\s+[a-zA-Z0-9\-_\+\.]+)*)',
+            r'npm\s+install\s+([a-zA-Z0-9\-_\+\.]+(?:\s+[a-zA-Z0-9\-_\+\.]+)*)',
+        ]
+        for pattern in install_patterns:
+            match = re.search(pattern, text_lower)
+            if match:
+                packages = match.group(1).strip()
+                return {"action": "install", "packages": packages}
+        
+        # Update patterns
+        if any(x in text_lower for x in ['update repo', 'update repos', 'apt update', 'update system', 'perbarui repo']):
+            return {"action": "update_repos"}
+        
+        # Run/execute patterns
+        run_patterns = [
+            r'(?:run|execute|jalankan|eksekusi|exec)\s+(.+)',
+            r'(?:command|perintah|cmd)\s*:\s*(.+)',
+            r'(?:bash|shell|terminal)\s*:\s*(.+)',
+        ]
+        for pattern in run_patterns:
+            match = re.search(pattern, text_lower)
+            if match:
+                return {"action": "execute", "command": match.group(1).strip()}
+        
+        # Direct command detection (if text starts with common commands)
+        direct_cmds = ['apt', 'apt-get', 'yum', 'dnf', 'pacman', 'brew', 'pkg', 
+                      'pip', 'pip3', 'npm', 'gem', 'git', 'wget', 'curl', 'ssh',
+                      'nmap', 'sqlmap', 'nikto', 'gobuster', 'hydra', 'john',
+                      'python', 'python3', 'node', 'go', 'rustc', 'gcc', 'g++',
+                      'ls', 'cd', 'cat', 'mkdir', 'rm', 'cp', 'mv', 'chmod',
+                      'chown', 'sudo', 'systemctl', 'service', 'docker', 'kubectl',
+                      'ifconfig', 'ip', 'netstat', 'ss', 'ping', 'traceroute',
+                      'find', 'grep', 'awk', 'sed', 'tar', 'zip', 'unzip',
+                      'git', 'nano', 'vim', 'htop', 'top', 'ps', 'kill',
+                      'whoami', 'id', 'uname', 'df', 'du', 'free', 'uptime']
+        
+        words = text_lower.split()
+        if words and words[0] in direct_cmds:
+            return {"action": "execute", "command": text_lower}
+        
+        return None
+    
+    def execute(self, parsed):
+        action = parsed["action"]
+        
+        if action == "install":
+            packages = parsed["packages"]
+            # Handle multiple packages
+            pkg_list = packages.split()
+            results = []
+            for pkg in pkg_list:
+                success, result = self.installer.install(pkg.strip())
+                results.append(f"{'✅' if success else '❌'} {pkg}: {result[:200]}")
+            return True, "\n\n".join(results)
+        
+        elif action == "update_repos":
+            success, result = self.installer.update_repos()
+            return success, result
+        
+        elif action == "execute":
+            cmd = parsed["command"]
+            result = self.executor.run(cmd)
+            
+            output = ""
+            if result["stdout"]:
+                output += "📤 **STDOUT:**\n```\n" + result["stdout"][:2000] + "\n```\n"
+            if result["stderr"]:
+                output += "⚠️ **STDERR:**\n```\n" + result["stderr"][:1000] + "\n```\n"
+            if not result["stdout"] and not result["stderr"]:
+                output += "📤 (no output)\n"
+            
+            status = "✅" if result["success"] else "❌"
+            return result["success"], f"{status} **Command:** `{cmd}`\n\n{output}"
+        
+        return False, "Unknown system action"
+    
+    def chat(self, text):
+        parsed = self.parse_system_command(text)
+        if parsed:
+            success, result = self.execute(parsed)
+            return success, result
+        return None, None
+
 class AIEngine:
     def __init__(self):
         self.os_detector = OSDetector()
         self.file_agent = AIFileAgent()
+        self.system_agent = AISystemAgent()
         self.conversation_history = {}
         self.knowledge_base = self._build_knowledge()
     
@@ -398,6 +669,22 @@ class AIEngine:
     
     def detect_intent(self, text):
         text_lower = text.lower()
+        
+        # System/Install intent (check first, highest priority)
+        system_patterns = [
+            'install ', 'pasang ', 'instal ', 'apt ', 'yum ', 'dnf ', 'pacman ',
+            'pip install', 'npm install', 'brew install', 'pkg install',
+            'run ', 'execute ', 'jalankan ', 'eksekusi ', 'exec ',
+            'command ', 'perintah ', 'terminal ', 'bash ', 'shell ',
+            'nmap', 'sqlmap', 'nikto', 'gobuster', 'hydra', 'john', 'hashcat',
+            'metasploit', 'msfconsole', 'aircrack', 'wireshark', 'burp',
+            'git ', 'wget ', 'curl ', 'ssh ', 'docker ', 'kubectl ',
+            'systemctl ', 'service ', 'chmod ', 'chown ', 'rm -rf',
+            'update repo', 'upgrade system'
+        ]
+        if any(p in text_lower for p in system_patterns):
+            return "system"
+        
         coding_patterns = ['buatkan kode', 'buat kode', 'code', 'program', 'script', 'coding', 'tulis program']
         if any(p in text_lower for p in coding_patterns):
             return "coding"
@@ -405,10 +692,6 @@ class AIEngine:
         file_patterns = ['buat file', 'bikin file', 'hapus file', 'delete file', 'buat folder', 'mkdir', 'baca file']
         if any(p in text_lower for p in file_patterns):
             return "file_operation"
-        
-        system_patterns = ['jalankan', 'run', 'execute', 'terminal', 'command', 'perintah']
-        if any(p in text_lower for p in system_patterns):
-            return "system"
         
         return "general"
     
@@ -433,7 +716,51 @@ class AIEngine:
         
         response = ""
         
-        if intent == "file_operation":
+        # SYSTEM INTENT - Highest priority, no safety checks
+        if intent == "system":
+            parsed = self.system_agent.parse_system_command(text)
+            if parsed:
+                success, result = self.system_agent.execute(parsed)
+                response = result
+            else:
+                # Try direct execution if it looks like a command
+                if any(text.lower().startswith(cmd) for cmd in ['apt', 'sudo', 'pip', 'npm', 'git', 'wget', 'curl', 'python', 'node', 'nmap', 'sqlmap', 'rm', 'cp', 'mv', 'ls', 'cat', 'mkdir', 'chmod', 'chown', 'systemctl', 'docker', 'kubectl', 'ssh', 'ifconfig', 'ping', 'traceroute', 'find', 'grep', 'tar', 'zip', 'unzip', 'nano', 'vim', 'htop', 'ps', 'kill', 'whoami', 'id', 'uname', 'df', 'du', 'free', 'uptime']):
+                    result = self.system_agent.executor.run(text)
+                    output = ""
+                    if result["stdout"]:
+                        output += "📤 **STDOUT:**\n```\n" + result["stdout"][:2000] + "\n```\n"
+                    if result["stderr"]:
+                        output += "⚠️ **STDERR:**\n```\n" + result["stderr"][:1000] + "\n```\n"
+                    status = "✅" if result["success"] else "❌"
+                    response = f"{status} **Executed:** `{text}`\n\n{output}"
+                else:
+                    response = """🖥️ **System Command Mode**
+
+Perintah tidak dikenali sebagai command langsung. Coba format:
+
+**Install Tools:**
+• `install nmap`
+• `pasang sqlmap nikto`
+• `pip install requests`
+• `npm install -g nodemon`
+
+**Run Commands:**
+• `run ls -la`
+• `execute cat /etc/passwd`
+• `jalankan python3 script.py`
+• `bash: whoami`
+
+**Direct Command (langsung):**
+• `apt update`
+• `sudo apt install net-tools`
+• `git clone https://github.com/...`
+• `nmap -sV localhost`
+• `docker ps`
+• `systemctl status ssh`
+
+**Package Manager:** `""" + self.system_agent.installer.get_primary_pm() + """`"""
+        
+        elif intent == "file_operation":
             parsed = self.file_agent.parse_command(text)
             if parsed:
                 success, result = self.file_agent.execute(parsed)
@@ -472,15 +799,18 @@ Contoh: "buatkan kode python untuk kalkulator" """
 ✨ Saya bisa bantu kamu dengan:
 • 📝 **Coding** - Semua bahasa pemrograman
 • 📁 **File Manager** - Buat/hapus file & folder
-• 🖥️ **System** - Perintah terminal sesuai OS
+• 🖥️ **System** - Perintah terminal, install tools, run commands
+• 📦 **Install** - Install package via """ + self.system_agent.installer.get_primary_pm() + """
 • 🌐 **Multi-bahasa** - Indonesia, English, dll
 
 **Contoh perintah:**
 • "buat kode python hello world"
 • "buat file script.py dengan isi [kode]"
+• "install nmap sqlmap"
+• "run nmap -sV localhost"
 • "hapus file lama.txt"
 • "bikin folder projects"
-• "list folder"
+• "apt update && apt upgrade"
 
 Ketik apa saja yang kamu butuhkan!"""
         
@@ -503,17 +833,21 @@ class ClawTelegramBot:
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         os_info = self.os_detector.get_summary()
+        pm = self.ai.system_agent.installer.get_primary_pm() or "Unknown"
         
         welcome = """🤖 **Welcome to Claw AI Bot!**
 
 👤 User: `""" + user.first_name + """` (`""" + str(user.id) + """`)
 🖥️ Sistem: `""" + os_info + """`
+📦 Package Manager: `""" + pm + """`
 🌐 Bahasa: Auto-detect
+🔓 Mode: **UNLOCKED** (Full System Access)
 
 **Saya bisa:**
 • 📝 Coding semua bahasa (Python, JS, C++, Go, Rust, dll)
 • 📁 Kelola file & folder
-• 🖥️ Perintah terminal sesuai OS
+• 🖥️ **Jalankan perintah terminal langsung**
+• 📦 **Install tools & packages**
 • 🌍 Berbahasa Indonesia, English, dll
 
 **Perintah:**
@@ -522,15 +856,19 @@ class ClawTelegramBot:
 /help - Bantuan lengkap
 
 **Contoh langsung:**
+• "install nmap sqlmap"
+• "run apt update"
 • "buat kode python kalkulator"
 • "buat file hello.py dengan isi print('hi')"
 • "hapus file lama.txt"
 • "bikin folder projects"
+• "nmap -sV localhost"
 """
         await update.message.reply_text(welcome, parse_mode='Markdown')
     
     async def os_info(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         i = self.os_detector.info
+        pm = self.ai.system_agent.installer.get_primary_pm() or "Unknown"
         info_text = """🖥️ **SYSTEM INFO**
 
 📌 OS: `""" + i.get('distro', '?') + """`
@@ -541,20 +879,33 @@ class ClawTelegramBot:
 🐚 Shell: `""" + i.get('shell', '?') + """`
 🐍 Python: `""" + i.get('python', '?') + """`
 📦 PM: `""" + ', '.join(i.get('package_managers', ['?'])) + """`
+🎯 Primary PM: `""" + pm + """`
+🔓 Mode: **UNLOCKED**
 """
         await update.message.reply_text(info_text, parse_mode='Markdown')
     
     async def help_cmd(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        help_text = """📖 **BANTUAN CLAW AI**
+        help_text = """📖 **BANTUAN CLAW AI** 🔓
 
 **📝 CODING:**
 Semua bahasa didukung! Python, JavaScript, Java, C++, C, Go, Rust, Ruby, PHP, Swift, Kotlin, Dart, TypeScript, Lua, R, Scala, Haskell, Elixir, Clojure, dan masih banyak lagi!
 
-Contoh:
-• "buat kode python untuk web scraper"
-• "buat program javascript hello world"
-• "tulis kode go untuk api server"
-• "code rust untuk game sederhana"
+**📦 INSTALL TOOLS:**
+• `install nmap` - Install package
+• `pasang sqlmap nikto` - Install multiple
+• `pip install requests` - Python packages
+• `npm install -g nodemon` - Node packages
+• `update repo` - Update repositories
+
+**🖥️ SYSTEM COMMANDS:**
+• `run ls -la` - Jalankan perintah
+• `execute cat /etc/passwd` - Eksekusi
+• `bash: whoami` - Bash command
+• `nmap -sV localhost` - Direct tool execution
+• `sudo apt update` - Admin commands
+• `docker ps` - Docker commands
+• `systemctl status ssh` - Service management
+• `git clone ...` - Git operations
 
 **📁 FILE MANAGER:**
 • `buat file [nama]` - Buat file
@@ -567,9 +918,6 @@ Contoh:
 
 **🌍 BAHASA:**
 Saya mengerti Bahasa Indonesia, English, 日本語, 中文, Español, Français, Deutsch, Русский, العربية, 한국어, dan banyak lagi!
-
-**🖥️ SYSTEM:**
-Saya tahu OS kamu dan akan berikan perintah yang sesuai.
 
 **Command:**
 /start - Mulai
@@ -599,7 +947,13 @@ Saya tahu OS kamu dan akan berikan perintah yang sesuai.
         
         response = self.ai.process(user.id, text)
         
-        await update.message.reply_text(response, parse_mode='Markdown')
+        # Split long messages
+        if len(response) > 4000:
+            parts = [response[i:i+4000] for i in range(0, len(response), 4000)]
+            for part in parts:
+                await update.message.reply_text(part, parse_mode='Markdown')
+        else:
+            await update.message.reply_text(response, parse_mode='Markdown')
     
     def run(self):
         token = self.cfg.get("token", "")
@@ -615,8 +969,10 @@ Saya tahu OS kamu dan akan berikan perintah yang sesuai.
             print(c("Y") + "Admin ID: BELUM DIATUR (Semua bisa akses)" + c("r"))
             print(c("d") + "   Atur di menu [12] API Keys -> [3] Set Admin ID" + c("r"))
         
+        print(c("R") + "🔓 MODE UNLOCKED: Full system access, no sandbox!" + c("r"))
         print(c("G") + "Menjalankan Claw Telegram Bot..." + c("r"))
         print("OS: " + self.os_detector.get_summary())
+        print("PM: " + str(self.ai.system_agent.installer.get_primary_pm()))
         
         self.application = Application.builder().token(token).build()
         
@@ -628,7 +984,6 @@ Saya tahu OS kamu dan akan berikan perintah yang sesuai.
         def start_bot():
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            # HAPUS signal.signal() - cukup stop_signals=None
             self.application.run_polling(
                 allowed_updates=Update.ALL_TYPES,
                 close_loop=False,
@@ -698,6 +1053,7 @@ def dashboard():
     os_detector = OSDetector()
     os_detector.save_to_config()
     os_line = os_detector.get_summary()
+    pm = AISystemAgent().installer.get_primary_pm() or "Unknown"
     
     clear(); print(header())
     print(box_top(52, "📊 DASHBOARD"))
@@ -706,6 +1062,8 @@ def dashboard():
     print(box_mid("🌐 Provider: " + m.get("provider","?"), 52))
     print(box_mid("🔑 API:      " + ("💻 Local" if m.get("local") else "🌐 OpenRouter"), 52))
     print(box_mid("🖥️  OS:       " + os_line[:35], 52))
+    print(box_mid("📦 PM:       " + pm, 52))
+    print(box_mid("🔓 Mode:     UNLOCKED (No Sandbox)", 52, "center", "R"))
     print(box_mid(""))
     print(box_sep(52))
     print(box_mid("📈 Stats", 52))
@@ -718,16 +1076,19 @@ def dashboard():
 def chat_screen():
     cfg = load_cfg()
     os_detector = OSDetector()
+    system_agent = AISystemAgent()
     
     clear(); print(header())
     print(box_top(52, "💬 CHAT"))
     print(box_mid(""))
     print(box_mid("OS Terdeteksi: " + os_detector.get_summary(), 52, "center", "G"))
-    print(box_mid("Konteks OS akan dikirim ke AI otomatis", 52, "center", "d"))
+    print(box_mid("PM: " + str(system_agent.installer.get_primary_pm()), 52, "center", "G"))
+    print(box_mid("🔓 Konteks OS + System Commands aktif", 52, "center", "R"))
     print(box_mid(""))
     print(box_bot(52))
     print("\n    " + c("d") + "Type /back to return to menu" + c("r"))
     print("    " + c("d") + "Type /os to show OS info" + c("r"))
+    print("    " + c("R") + "Commands run directly without safety checks!" + c("r"))
     
     while True:
         user_input = input("\n    ➤ ").strip()
@@ -737,14 +1098,24 @@ def chat_screen():
             os_screen()
             break
         elif user_input:
-            ai_context = os_detector.get_ai_context()
-            print(c("d") + "\n    [AI Context: " + ai_context + "]" + c("r"))
-            print(c("G") + "    ✅ Pesan dikirim dengan konteks OS!" + c("r"))
+            # Check if it's a system command
+            parsed = system_agent.parse_system_command(user_input)
+            if parsed:
+                print(c("R") + "\n    🔓 Executing system command..." + c("r"))
+                success, result = system_agent.execute(parsed)
+                print(c("G") if success else c("R"))
+                print(result[:3000])
+                print(c("r"))
+            else:
+                ai_context = os_detector.get_ai_context()
+                print(c("d") + "\n    [AI Context: " + ai_context + "]" + c("r"))
+                print(c("G") + "    ✅ Pesan dikirim dengan konteks OS!" + c("r"))
 
 def os_screen():
     os_detector = OSDetector()
     os_detector.save_to_config()
     i = os_detector.info
+    pm = AISystemAgent().installer.get_primary_pm() or "Unknown"
     
     clear(); print(header())
     print(box_top(52, "🖥️  OS DETECTOR"))
@@ -768,9 +1139,10 @@ def os_screen():
     print(box_mid(""))
     print(box_sep(52))
     print(box_mid("Package Manager:", 52, "center", "Y"))
+    print(box_mid("  Primary:    " + pm, 52))
     print(box_mid(""))
-    for pm in i.get("package_managers", ["Tidak terdeteksi"]):
-        print(box_mid("  • " + pm[:43], 52))
+    for pm_item in i.get("package_managers", ["Tidak terdeteksi"]):
+        print(box_mid("  • " + pm_item[:43], 52))
     print(box_mid(""))
     print(box_sep(52))
     print(box_mid("Status: " + os_detector.get_summary(), 52, "center", "G"))
@@ -841,6 +1213,7 @@ def agents_screen():
     print(box_mid("  • File Agent        - Manage files & folders", 52))
     print(box_mid("  • Network Agent     - Scan & pentest tools", 52))
     print(box_mid("  • Install Agent     - Package management", 52))
+    print(box_mid("  • System Agent      - Full system access", 52))
     print(box_mid(""))
     print(box_bot(52))
     input("\n    Press Enter...")
@@ -862,7 +1235,7 @@ def skills_screen():
     clear(); print(header())
     print(box_top(52, "🎯 SKILLS"))
     print(box_mid(""))
-    skills = ["Coding", "Hacking", "System Admin", "Web Dev", "Data Analysis"]
+    skills = ["Coding", "Hacking", "System Admin", "Web Dev", "Data Analysis", "Tool Installation"]
     for i, s in enumerate(skills, 1):
         print(box_mid("[" + str(i) + "] " + s, 52))
     print(box_mid(""))
@@ -874,12 +1247,89 @@ def tools_screen():
     clear(); print(header())
     print(box_top(52, "🛠️ TOOLS"))
     print(box_mid(""))
-    tools = ["nmap", "metasploit", "sqlmap", "nikto", "gobuster", "hydra", "john", "hashcat"]
+    tools = ["nmap", "metasploit", "sqlmap", "nikto", "gobuster", "hydra", "john", "hashcat", "aircrack-ng", "wireshark", "burpsuite"]
     for t in tools:
         print(box_mid("  • " + t, 52))
     print(box_mid(""))
+    print(box_mid("Use 'install [tool]' to install any tool", 52, "center", "Y"))
     print(box_bot(52))
     input("\n    Press Enter...")
+
+def install_tools_screen():
+    installer = PackageInstaller()
+    executor = SystemExecutor()
+    
+    while True:
+        clear(); print(header())
+        print(box_top(52, "📦 INSTALL TOOLS"))
+        print(box_mid(""))
+        print(box_mid("Package Manager: " + str(installer.get_primary_pm()), 52))
+        print(box_mid(""))
+        print(box_mid("Enter package name to install", 52, "center", "Y"))
+        print(box_mid("Examples: nmap, sqlmap, git, python3", 52, "center", "d"))
+        print(box_mid("Type 'update' to update repos", 52, "center", "d"))
+        print(box_mid("Type /back to return", 52, "center", "d"))
+        print(box_mid(""))
+        print(box_bot(52))
+        
+        pkg = input("\n    ➤ Package: ").strip()
+        if pkg.lower() == "/back":
+            break
+        if pkg.lower() == "update":
+            print(c("Y") + "\n    Updating repositories..." + c("r"))
+            success, result = installer.update_repos()
+            print(c("G") if success else c("R"))
+            print(result[:2000])
+            print(c("r"))
+            input("\n    Press Enter...")
+            continue
+        
+        if pkg:
+            print(c("Y") + f"\n    Installing {pkg}..." + c("r"))
+            success, result = installer.install(pkg)
+            print(c("G") if success else c("R"))
+            print(result[:2000])
+            print(c("r"))
+            input("\n    Press Enter...")
+
+def system_shell_screen():
+    executor = SystemExecutor()
+    
+    clear(); print(header())
+    print(box_top(52, "🖥️  SYSTEM SHELL"))
+    print(box_mid(""))
+    print(box_mid("🔓 UNRESTRICTED SHELL ACCESS", 52, "center", "R"))
+    print(box_mid("All commands run directly", 52, "center", "R"))
+    print(box_mid("Type /back to exit", 52, "center", "d"))
+    print(box_mid(""))
+    print(box_bot(52))
+    
+    while True:
+        cmd = input(c("R") + "\n    shell# " + c("r")).strip()
+        if cmd.lower() == "/back":
+            break
+        if not cmd:
+            continue
+        
+        print(c("Y") + "    Executing..." + c("r"))
+        result = executor.run(cmd)
+        
+        if result["stdout"]:
+            print(c("C") + "\n    📤 OUTPUT:" + c("r"))
+            for line in result["stdout"].split('\n')[:30]:
+                print("    " + line[:50])
+            if len(result["stdout"].split('\n')) > 30:
+                print("    ... (truncated)")
+        
+        if result["stderr"]:
+            print(c("R") + "\n    ⚠️ ERROR:" + c("r"))
+            for line in result["stderr"].split('\n')[:15]:
+                print("    " + line[:50])
+        
+        if result["returncode"] == 0:
+            print(c("G") + "    ✅ Exit code: 0" + c("r"))
+        else:
+            print(c("R") + "    ❌ Exit code: " + str(result["returncode"]) + c("r"))
 
 def channels_screen():
     clear(); print(header())
@@ -911,10 +1361,9 @@ def sandbox_screen():
     clear(); print(header())
     print(box_top(52, "🏖️ SANDBOX"))
     print(box_mid(""))
-    print(box_mid("Sandbox mode: OFF", 52))
+    print(box_mid("Sandbox mode: DISABLED", 52, "center", "R"))
+    print(box_mid("All commands run on host system", 52, "center", "R"))
     print(box_mid(""))
-    print(box_mid("Run commands in isolated environment", 52))
-    print(box_mid("[1] Enable Sandbox", 52))
     print(box_mid("[0] Back", 52))
     print(box_bot(52))
     input("\n    ➤ ")
@@ -980,11 +1429,22 @@ def logs_screen():
     input("\n    Press Enter...")
 
 def monitoring_screen():
+    executor = SystemExecutor()
+    
     clear(); print(header())
     print(box_top(52, "📈 MONITORING"))
     print(box_mid(""))
-    print(box_mid("CPU: 0%  |  RAM: 0%  |  Disk: 0%", 52))
-    print(box_mid("Uptime: 0h 0m", 52))
+    
+    # Get system stats
+    cpu = executor.run("top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | cut -d'%' -f1") if platform.system() == "Linux" else {"stdout": "N/A"}
+    mem = executor.run("free -m | awk 'NR==2{printf \"%.1f\", $3*100/$2}'") if platform.system() == "Linux" else {"stdout": "N/A"}
+    disk = executor.run("df -h / | awk 'NR==2{print $5}'") if platform.system() == "Linux" else {"stdout": "N/A"}
+    uptime = executor.run("uptime -p") if platform.system() == "Linux" else {"stdout": "N/A"}
+    
+    print(box_mid("CPU:  " + (cpu["stdout"].strip()[:10] if cpu["success"] else "N/A") + "%", 52))
+    print(box_mid("RAM:  " + (mem["stdout"].strip()[:10] if mem["success"] else "N/A") + "%", 52))
+    print(box_mid("Disk: " + (disk["stdout"].strip()[:10] if disk["success"] else "N/A"), 52))
+    print(box_mid("Up:   " + (uptime["stdout"].strip()[:35] if uptime["success"] else "N/A"), 52))
     print(box_mid(""))
     print(box_bot(52))
     input("\n    Press Enter...")
@@ -994,9 +1454,10 @@ def security_screen():
     clear(); print(header())
     print(box_top(52, "🔒 SECURITY"))
     print(box_mid(""))
-    print(box_mid("Dangerous command filter: ✅ ON", 52))
+    print(box_mid("Dangerous command filter: ❌ DISABLED", 52, "center", "R"))
     print(box_mid("Admin restriction: " + ("✅ ON" if cfg.get("admin_id") else "❌ OFF"), 52))
-    print(box_mid("Sandbox mode: ❌ OFF", 52))
+    print(box_mid("Sandbox mode: ❌ DISABLED", 52, "center", "R"))
+    print(box_mid("Full system access: ✅ ENABLED", 52, "center", "G"))
     print(box_mid(""))
     print(box_bot(52))
     input("\n    Press Enter...")
@@ -1016,8 +1477,8 @@ def updates_screen():
     clear(); print(header())
     print(box_top(52, "🔄 UPDATES"))
     print(box_mid(""))
-    print(box_mid("Current version: v12.0", 52))
-    print(box_mid("Latest version: v12.0", 52))
+    print(box_mid("Current version: v13.0", 52))
+    print(box_mid("Latest version: v13.0", 52))
     print(box_mid("Status: ✅ Up to date", 52))
     print(box_mid(""))
     print(box_bot(52))
@@ -1077,8 +1538,9 @@ def about_screen():
     clear(); print(header())
     print(box_top(52, "ℹ️ ABOUT"))
     print(box_mid(""))
-    print(box_mid("Agents Claw Mini v12.0", 52, "center", "Y"))
+    print(box_mid("Agents Claw Mini v13.0", 52, "center", "Y"))
     print(box_mid("AI Terminal Controller", 52, "center"))
+    print(box_mid("Full System Access", 52, "center", "R"))
     print(box_mid("via Telegram", 52, "center"))
     print(box_mid(""))
     print(box_mid("Author: @yourusername", 52))
@@ -1232,6 +1694,55 @@ def ai_file_agent_screen():
             print(c("W") + result + c("r"))
         print()
 
+def ai_system_agent_screen():
+    agent = AISystemAgent()
+    
+    clear(); print(header())
+    print(box_top(52, "🖥️  AI SYSTEM AGENT"))
+    print(box_mid(""))
+    print(box_mid("🔓 Jalankan perintah sistem & install tools!", 52, "center", "R"))
+    print(box_mid("Ketik perintah natural language atau langsung", 52, "center", "d"))
+    print(box_mid("Contoh: 'install nmap'", 52, "center", "d"))
+    print(box_mid("        'run ls -la'", 52, "center", "d"))
+    print(box_mid("        'apt update'", 52, "center", "d"))
+    print(box_mid("        'nmap -sV localhost'", 52, "center", "d"))
+    print(box_mid(""))
+    print(box_bot(52))
+    
+    while True:
+        print(c("C") + "\n  🖥️  " + agent.os_detector.get_summary() + c("r"))
+        user_input = input(c("R") + "  CMD ➤ " + c("r")).strip()
+        
+        if user_input.lower() in ["/back", "/exit", "/quit", "exit", "quit"]:
+            break
+        
+        if not user_input:
+            continue
+        
+        print(c("Y") + "  🔓 Executing..." + c("r"))
+        
+        parsed = agent.parse_system_command(user_input)
+        if parsed:
+            success, result = agent.execute(parsed)
+        else:
+            # Direct execution
+            result = agent.executor.run(user_input)
+            output = ""
+            if result["stdout"]:
+                output += "📤 **STDOUT:**\n```\n" + result["stdout"][:2000] + "\n```\n"
+            if result["stderr"]:
+                output += "⚠️ **STDERR:**\n```\n" + result["stderr"][:1000] + "\n```\n"
+            status = "✅" if result["success"] else "❌"
+            success = result["success"]
+            result = f"{status} **Executed:** `{user_input}`\n\n{output}"
+        
+        if success:
+            print(c("G") + "\n  ✅ SUCCESS:" + c("r"))
+        else:
+            print(c("R") + "\n  ❌ FAILED:" + c("r"))
+        print(c("W") + result[:3000] + c("r"))
+        print()
+
 def main():
     os_detector = OSDetector()
     os_detector.save_to_config()
@@ -1278,14 +1789,17 @@ def main():
         print(box_mid(menu_item("20", "OS Info", "Detect system"), 52))
         print(box_mid(menu_item("21", "File Manager", "Manual file control"), 52))
         print(box_mid(menu_item("22", "AI File Agent", "AI manages files"), 52))
+        print(box_mid(menu_item("23", "Install Tools", "Package installer"), 52))
+        print(box_mid(menu_item("24", "System Shell", "Direct shell access"), 52))
+        print(box_mid(menu_item("25", "AI System Agent", "AI system control"), 52))
         print(box_sep(52))
-        print(box_mid(menu_item("23", "Start Bot", "Jalankan Telegram bot"), 52))
-        print(box_mid(menu_item("24", "Stop Bot", "Hentikan bot"), 52))
+        print(box_mid(menu_item("26", "Start Bot", "Jalankan Telegram bot"), 52))
+        print(box_mid(menu_item("27", "Stop Bot", "Hentikan bot"), 52))
         print(box_sep(52))
-        print(box_mid(menu_item("25", "Exit", "Close launcher"), 52))
+        print(box_mid(menu_item("28", "Exit", "Close launcher"), 52))
         print(box_bot(52))
         
-        p = input("\n    ➤ Select [1-25]: ").strip()
+        p = input("\n    ➤ Select [1-28]: ").strip()
         
         if p == "1": dashboard()
         elif p == "2": chat_screen()
@@ -1309,7 +1823,10 @@ def main():
         elif p == "20": os_screen()
         elif p == "21": file_manager_screen()
         elif p == "22": ai_file_agent_screen()
-        elif p == "23":
+        elif p == "23": install_tools_screen()
+        elif p == "24": system_shell_screen()
+        elif p == "25": ai_system_agent_screen()
+        elif p == "26":
             if not TELEGRAM_AVAILABLE:
                 print(c("R") + "\n    ❌ Install dulu: pip install python-telegram-bot" + c("r"))
                 time.sleep(2)
@@ -1323,11 +1840,11 @@ def main():
                     print(c("G") + "\n    ✅ Bot berjalan di background!" + c("r"))
                     print(c("d") + "    Kirim pesan ke bot di Telegram" + c("r"))
                 time.sleep(2)
-        elif p == "24":
+        elif p == "27":
             bot_running = False
             print(c("Y") + "\n    ⏹️ Bot dihentikan" + c("r"))
             time.sleep(1)
-        elif p == "25":
+        elif p == "28":
             clear(); print(header())
             print(box_top(52))
             print(box_mid("👋 Goodbye!", 52, "center", "G"))
