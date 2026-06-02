@@ -32,6 +32,7 @@ except ImportError:
         def stop(self): pass
     class _DummyBuilder:
         def token(self, t): return self
+        def request(self, r): return self
         def build(self): return _DummyApp()
     class Application:
         @staticmethod
@@ -550,7 +551,6 @@ class NexcorixTelegramBot:
                     NexcorixTelegramBot._active_instance.stop()
                 except Exception:
                     pass
-                # Tunggu sebentar supaya koneksi lama lepas dari server Telegram
                 time.sleep(1.5)
                 NexcorixTelegramBot._active_instance = None
             NexcorixTelegramBot._active_instance = self
@@ -561,6 +561,7 @@ class NexcorixTelegramBot:
         self.application = None
         self._thread = None
         self._running = False
+        self._stop_event = threading.Event()
     
     def is_admin(self, user_id):
         admin_id = self.cfg.get("admin_id", "")
@@ -568,6 +569,7 @@ class NexcorixTelegramBot:
             return True
         return str(user_id) == str(admin_id)
     
+    # ========== FULL MODE HANDLERS (async) ==========
     async def start(self, update, context):
         user = update.effective_user
         os_info = self.os_detector.get_summary()
@@ -671,24 +673,141 @@ I speak: English, Bahasa Indonesia, 日本語, 中文, and many more!
         else:
             await update.message.reply_text(response, parse_mode='Markdown')
     
-    def stop(self):
-        """Hentikan bot dengan benar: signal stop ke application + cleanup."""
-        if not self._running or self.application is None:
+    # ========== MINI MODE HELPERS (sync, requests only) ==========
+    def _send_message_mini(self, chat_id, text):
+        token = self.cfg.get("token", "")
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        try:
+            data = json.dumps({
+                "chat_id": chat_id,
+                "text": text,
+                "parse_mode": "Markdown"
+            }).encode('utf-8')
+            req = urllib.request.Request(
+                url, data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            urllib.request.urlopen(req, timeout=30)
+        except Exception as e:
+            print(c("R") + f"    Send failed: {e}" + c("r"))
+    
+    def _process_update_mini(self, update):
+        msg = update.get("message", {})
+        if not msg or "text" not in msg:
+            return
+        user = msg.get("from", {})
+        user_id = user.get("id")
+        text = msg.get("text", "")
+        chat_id = msg.get("chat", {}).get("id")
+        
+        if not self.is_admin(user_id):
+            self._send_message_mini(chat_id, "🚫 **Access Denied**\n\nYour ID: `" + str(user_id) + "`")
             return
         
-        print(c("Y") + "    ⏹️ Stopping bot instance..." + c("r"))
-        try:
-            self.application.stop()
-        except Exception as e:
-            # Kalau bot belum sempat start polling, stop() bisa error — abaikan saja
-            pass
+        if text.startswith("/start"):
+            os_info = self.os_detector.get_summary()
+            model_name = ALL_MODELS.get(self.cfg.get("model", "deepseek_chat"), {}).get("name", "Unknown")
+            welcome = f"""🦂 **Welcome to Nexcorix Claw (Mini Mode)!**
+
+👤 User: `{user.get('first_name','User')}` (`{user_id}`)
+🖥️ System: `{os_info}`
+🤖 Model: `{model_name}`
+🔓 Mode: **Full Access**
+
+I'm your conversational AI assistant. You can:
+• 💬 **Chat naturally**
+• 🖥️ **Run commands** — "install nmap", "run ls -la"
+• 📁 **Manage files** — "create file test.txt", "delete old folder"
+
+**Examples:**
+• "Hello, how are you?"
+• "install nmap sqlmap"
+• "buat file hello.py dengan isi print('hi')"
+• "run uname -a"
+"""
+            self._send_message_mini(chat_id, welcome)
+            return
         
+        if text.startswith("/help"):
+            help_text = """📖 **Nexcorix Claw Help (Mini Mode)**
+
+**💬 CHAT:** Ask me anything!
+**🖥️ SYSTEM:** `install nmap`, `run ls -la`, `nmap localhost`
+**📁 FILES:** `create file test.txt`, `delete old`, `list`, `cd ~/downloads`
+**📝 CODE:** "Write a Python scraper"
+
+**Commands:** /start /help /model
+"""
+            self._send_message_mini(chat_id, help_text)
+            return
+        
+        if text.startswith("/model"):
+            model_name = ALL_MODELS.get(self.cfg.get("model", "deepseek_chat"), {}).get("name", "Unknown")
+            self._send_message_mini(chat_id, f"🤖 **Current Model:** `{model_name}`")
+            return
+        
+        response = self.ai.process(user_id, text)
+        if len(response) > 4000:
+            parts = [response[i:i+4000] for i in range(0, len(response), 4000)]
+            for part in parts:
+                self._send_message_mini(chat_id, part)
+                time.sleep(0.5)
+        else:
+            self._send_message_mini(chat_id, response)
+    
+    def _poll_loop_mini(self):
+        token = self.cfg.get("token", "")
+        url = f"https://api.telegram.org/bot{token}/getUpdates"
+        offset = 0
+        
+        while not self._stop_event.is_set():
+            try:
+                req = urllib.request.Request(
+                    f"{url}?offset={offset}&limit=10",
+                    method="GET"
+                )
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    data = json.loads(resp.read().decode('utf-8'))
+                
+                for update in data.get("result", []):
+                    offset = update["update_id"] + 1
+                    self._process_update_mini(update)
+                
+                if not data.get("result"):
+                    time.sleep(1)
+                    
+            except urllib.error.HTTPError as e:
+                if e.code == 409:
+                    print(c("Y") + "    ⚠️ Conflict: another instance detected, waiting 5s..." + c("r"))
+                    time.sleep(5)
+                else:
+                    time.sleep(2)
+            except Exception as e:
+                print(c("R") + f"    Poll error: {e}" + c("r"))
+                time.sleep(3)
+    
+    # ========== STOP (works for both modes) ==========
+    def stop(self):
+        if not self._running:
+            return
+        
+        print(c("Y") + "    ⏹️ Stopping bot..." + c("r"))
+        
+        if TELEGRAM_AVAILABLE and self.application is not None:
+            try:
+                self.application.stop()
+            except Exception:
+                pass
+        
+        self._stop_event.set()
         self._running = False
         
         with NexcorixTelegramBot._lock:
             if NexcorixTelegramBot._active_instance is self:
                 NexcorixTelegramBot._active_instance = None
     
+    # ========== RUN ==========
     def run(self):
         if self._running:
             print(c("Y") + "    ⚠️ Bot already running!" + c("r"))
@@ -696,14 +815,34 @@ I speak: English, Bahasa Indonesia, 日本語, 中文, and many more!
         
         token = self.cfg.get("token", "")
         if not token:
-            print(c("R") + "Telegram token not set!" + c("r"))
+            print(c("R") + "    ❌ Telegram token not set!" + c("r"))
             return False
         
-        print(c("G") + "Starting Nexcorix Claw Bot..." + c("r"))
+        if TELEGRAM_AVAILABLE:
+            return self._run_full(token)
+        else:
+            print(c("G") + "    ℹ️ python-telegram-bot not found, using Mini Mode (requests only)" + c("r"))
+            return self._run_mini(token)
+    
+    def _run_full(self, token):
+        print(c("G") + "Starting Nexcorix Claw Bot (Full Mode)..." + c("r"))
         print("Model: " + ALL_MODELS.get(self.cfg.get("model"), {}).get("name", "Unknown"))
         print("OS: " + self.os_detector.get_summary())
         
-        self.application = Application.builder().token(token).build()
+        # Fix timeout untuk koneksi lambat
+        try:
+            from telegram.request import HTTPXRequest
+            request = HTTPXRequest(
+                connection_pool_size=8,
+                read_timeout=30,
+                connect_timeout=30,
+                write_timeout=30,
+                pool_timeout=30
+            )
+            self.application = Application.builder().token(token).request(request).build()
+        except Exception:
+            self.application = Application.builder().token(token).build()
+        
         self.application.add_handler(CommandHandler("start", self.start))
         self.application.add_handler(CommandHandler("model", self.model_cmd))
         self.application.add_handler(CommandHandler("help", self.help_cmd))
@@ -713,7 +852,6 @@ I speak: English, Bahasa Indonesia, 日本語, 中文, and many more!
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                # allowed_updates=None artinya semua jenis update (sama dengan Update.ALL_TYPES)
                 self.application.run_polling(close_loop=False, stop_signals=None)
             except Exception as e:
                 print(c("R") + f"    Bot error: {e}" + c("r"))
@@ -721,6 +859,17 @@ I speak: English, Bahasa Indonesia, 日本語, 中文, and many more!
                 self._running = False
         
         self._thread = threading.Thread(target=start_bot, daemon=True)
+        self._thread.start()
+        self._running = True
+        return True
+    
+    def _run_mini(self, token):
+        print(c("G") + "Starting Nexcorix Claw Bot (Mini Mode)..." + c("r"))
+        print("Model: " + ALL_MODELS.get(self.cfg.get("model"), {}).get("name", "Unknown"))
+        print("OS: " + self.os_detector.get_summary())
+        
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._poll_loop_mini, daemon=True)
         self._thread.start()
         self._running = True
         return True
@@ -936,7 +1085,7 @@ def api_keys_screen():
 def main():
     OSDetector().save_to_config()
     bot_running = False
-    active_bot = None  # Simpan instance bot yang sedang jalan
+    active_bot = None
     
     while True:
         clear(); print(header())
@@ -973,10 +1122,7 @@ def main():
         elif p == "4": install_tools_screen()
         elif p == "5": api_keys_screen()
         elif p == "6":
-            if not TELEGRAM_AVAILABLE:
-                print(c("R") + "\n    ❌ pip install python-telegram-bot" + c("r"))
-                time.sleep(2)
-            elif not cfg.get("token"):
+            if not cfg.get("token"):
                 print(c("R") + "\n    ❌ Telegram token not set!" + c("r"))
                 time.sleep(2)
             else:
