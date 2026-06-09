@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Nexcorix Claw v4.0 - Ultimate Multi-Channel AI Agent with 100+ Models
-All commands execute directly, no "how to" instructions.
+Nexcorix Claw v4.0 - Ultimate AI Agent for All OS (Linux, Windows, macOS, Termux, WSL)
+Friendly AI with emotions, full terminal control, auto-detect package manager, no sudo required.
 """
 
 import os
@@ -45,7 +45,8 @@ C = {
     "O":"\033[38;5;208m","P":"\033[38;5;141m","T":"\033[38;5;37m","L":"\033[38;5;11m",
 }
 def c(name): return C.get(name, "")
-def clear(): os.system("clear")
+def clear():
+    os.system("clear" if os.name != "nt" else "cls")
 
 CONFIG_FILE = os.path.expanduser("~/.nexcorix_config.json")
 def load_cfg():
@@ -57,27 +58,33 @@ def load_cfg():
         "provider": "openrouter", "model": "openai/gpt-4o", "fallback_model": "deepseek/deepseek-chat",
         "openai_key": "", "anthropic_key": "", "google_key": "", "deepseek_key": "", "openrouter_key": "",
         "custom_api_url": "", "custom_api_key": "", "ollama_url": "http://localhost:11434",
-        "temperature": 0.7, "max_tokens": 4096, "context_window": "auto", "performance": "balanced",
+        "temperature": 0.8, "max_tokens": 4096, "context_window": "auto", "performance": "balanced",
         "admin_id": "", "token": "", "base_url": "https://openrouter.ai/api/v1",
         "chat_history": {}, "channels": {}
     }
 def save_cfg(cfg):
     with open(CONFIG_FILE, "w") as f: json.dump(cfg, f, indent=2)
 
-# ========== OS Detector ==========
+# ========== OS Detector (Enhanced) ==========
 class OSDetector:
     def __init__(self):
         self.info = self._detect()
     def _detect(self):
         info = {
-            "system": platform.system(), "release": platform.release(),
-            "version": platform.version(), "platform": platform.platform(),
-            "machine": platform.machine(), "processor": platform.processor() or "Unknown",
+            "system": platform.system(),
+            "release": platform.release(),
+            "version": platform.version(),
+            "platform": platform.platform(),
+            "machine": platform.machine(),
+            "processor": platform.processor() or "Unknown",
             "hostname": socket.gethostname(),
             "username": os.environ.get("USER") or os.environ.get("USERNAME") or "unknown",
-            "home": os.path.expanduser("~"), "shell": os.environ.get("SHELL", os.environ.get("COMSPEC", "unknown")),
-            "terminal": os.environ.get("TERM", "unknown"), "python": platform.python_version(),
+            "home": os.path.expanduser("~"),
+            "shell": os.environ.get("SHELL", os.environ.get("COMSPEC", "unknown")),
+            "terminal": os.environ.get("TERM", "unknown"),
+            "python": platform.python_version(),
         }
+        # Deteksi distribusi Linux
         if info["system"] == "Linux":
             try:
                 with open("/etc/os-release") as f:
@@ -85,22 +92,42 @@ class OSDetector:
                         if line.startswith("PRETTY_NAME="):
                             info["distro"] = line.split("=")[1].strip().strip('"')
                             break
-            except: info["distro"] = "Unknown Linux"
-        else: info["distro"] = info["system"]
+            except:
+                info["distro"] = "Unknown Linux"
+        else:
+            info["distro"] = info["system"]
+        # Deteksi WSL
         info["is_wsl"] = False
         try:
             with open("/proc/version") as f:
-                if "microsoft" in f.read().lower(): info["is_wsl"] = True
-        except: pass
+                if "microsoft" in f.read().lower():
+                    info["is_wsl"] = True
+        except:
+            pass
+        # Deteksi Termux
         info["is_termux"] = os.environ.get("TERMUX_VERSION") is not None
+        # Deteksi Docker
         info["is_docker"] = os.path.exists("/.dockerenv")
+        # Deteksi package managers yang tersedia
         info["package_managers"] = self._detect_package_manager()
+        # Deteksi ketersediaan sudo
+        info["has_sudo"] = os.system("which sudo >/dev/null 2>&1") == 0
         return info
     def _detect_package_manager(self):
         managers = []
-        cmds = {"apt":"apt","apt-get":"apt-get","yum":"yum","dnf":"dnf","pacman":"pacman","zypper":"zypper","apk":"apk","brew":"brew","pkg":"pkg","choco":"choco","winget":"winget","pip":"pip","pip3":"pip3","npm":"npm","gem":"gem"}
+        # Daftar package manager berdasarkan perintah
+        cmds = {
+            "apt": "apt", "apt-get": "apt-get", "yum": "yum", "dnf": "dnf",
+            "pacman": "pacman", "zypper": "zypper", "apk": "apk",
+            "brew": "brew", "pkg": "pkg", "choco": "choco", "winget": "winget",
+            "pip": "pip", "pip3": "pip3", "npm": "npm", "gem": "gem"
+        }
         for cmd, name in cmds.items():
-            if os.system(f"which {cmd} >/dev/null 2>&1") == 0: managers.append(name)
+            if os.system(f"which {cmd} >/dev/null 2>&1") == 0:
+                managers.append(name)
+        # Jika Termux, pastikan pkg ada (meskipun which gagal? Biasanya pkg ada)
+        if self.info.get("is_termux") and "pkg" not in managers:
+            managers.append("pkg")
         return managers if managers else ["unknown"]
     def get_summary(self):
         parts = [self.info["distro"]]
@@ -111,14 +138,18 @@ class OSDetector:
     def get_ai_context(self):
         i = self.info
         pm = ", ".join(i["package_managers"])
-        return f"OS: {self.get_summary()} | Shell: {i['shell']} | Arch: {i['machine']} | PM: {pm}"
+        return f"OS: {self.get_summary()} | Shell: {i['shell']} | Arch: {i['machine']} | PM: {pm} | Sudo: {i['has_sudo']}"
 
 # ========== System Executor ==========
 class SystemExecutor:
     def __init__(self): self.os_detector = OSDetector()
     def run(self, command, timeout=300):
         try:
-            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=os.path.expanduser("~"))
+            # Untuk Windows, gunakan shell yang sesuai
+            if os.name == "nt":
+                process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=os.path.expanduser("~"))
+            else:
+                process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, executable="/bin/bash" if not self.os_detector.info["is_termux"] else None, cwd=os.path.expanduser("~"))
             stdout, stderr = process.communicate(timeout=timeout)
             return {"success": process.returncode == 0, "returncode": process.returncode, "stdout": stdout, "stderr": stderr, "command": command}
         except subprocess.TimeoutExpired:
@@ -127,7 +158,7 @@ class SystemExecutor:
         except Exception as e:
             return {"success": False, "returncode": -1, "stdout": "", "stderr": str(e), "command": command}
 
-# ========== Advanced Installer ==========
+# ========== Advanced Installer (Cross-Platform) ==========
 class AdvancedInstaller:
     def __init__(self):
         self.os_detector = OSDetector()
@@ -135,12 +166,19 @@ class AdvancedInstaller:
         self.pm_commands = {
             "apt": "DEBIAN_FRONTEND=noninteractive apt install -y {package}",
             "apt-get": "DEBIAN_FRONTEND=noninteractive apt-get install -y {package}",
-            "yum": "yum install -y {package}", "dnf": "dnf install -y {package}",
-            "pacman": "pacman -S --noconfirm {package}", "zypper": "zypper install -y {package}",
-            "apk": "apk add {package}", "brew": "brew install {package}",
-            "pkg": "pkg install -y {package}", "choco": "choco install {package} -y",
+            "yum": "yum install -y {package}",
+            "dnf": "dnf install -y {package}",
+            "pacman": "pacman -S --noconfirm {package}",
+            "zypper": "zypper install -y {package}",
+            "apk": "apk add {package}",
+            "brew": "brew install {package}",
+            "pkg": "pkg install -y {package}",
+            "choco": "choco install {package} -y",
             "winget": "winget install {package} --accept-package-agreements --accept-source-agreements",
-            "pip": "pip install {package}", "pip3": "pip3 install {package}", "npm": "npm install -g {package}", "gem": "gem install {package}",
+            "pip": "pip install {package}",
+            "pip3": "pip3 install {package}",
+            "npm": "npm install -g {package}",
+            "gem": "gem install {package}",
         }
         self.tool_aliases = {
             "msfconsole":"metasploit-framework","msfvenom":"metasploit-framework","nmap":"nmap","sqlmap":"sqlmap",
@@ -153,29 +191,47 @@ class AdvancedInstaller:
         }
     def get_primary_pm(self):
         managers = self.os_detector.info.get("package_managers", [])
-        priority = ["apt","apt-get","dnf","yum","pacman","zypper","apk","brew","pkg","choco","winget"]
+        priority = ["pkg", "apt", "apt-get", "dnf", "yum", "pacman", "zypper", "apk", "brew", "choco", "winget", "pip", "pip3"]
         for pm in priority:
-            if pm in managers: return pm
+            if pm in managers:
+                return pm
         return managers[0] if managers else None
-    def resolve_package(self, tool_name): return self.tool_aliases.get(tool_name.lower(), tool_name)
+    def resolve_package(self, tool_name):
+        return self.tool_aliases.get(tool_name.lower(), tool_name)
+    def _has_sudo(self):
+        return self.os_detector.info.get("has_sudo", False)
     def install(self, package, pm=None):
-        if not pm: pm = self.get_primary_pm()
-        if not pm or pm=="unknown": return False, "No package manager!"
+        if not pm:
+            pm = self.get_primary_pm()
+        if not pm or pm == "unknown":
+            return False, "No package manager detected!"
         resolved = self.resolve_package(package)
-        if package.lower() in self.github_tools: return self.install_from_github(package.lower())
+        if package.lower() in self.github_tools:
+            return self.install_from_github(package.lower())
         if pm in self.pm_commands:
             cmd = self.pm_commands[pm].format(package=resolved)
-            if pm in ["apt","apt-get","dnf","yum","pacman","zypper","apk"]: cmd = "sudo "+cmd
+            # Tambahkan sudo hanya jika diperlukan (bukan Termux dan sudo ada)
+            if pm in ["apt","apt-get","dnf","yum","pacman","zypper","apk"] and self._has_sudo():
+                cmd = "sudo " + cmd
+            # Jika Termux, pastikan tidak ada sudo
+            if self.os_detector.info.get("is_termux", False):
+                cmd = cmd.replace("sudo ", "")
             result = self.executor.run(cmd, timeout=600)
-            if result["success"]: return True, f"OK {package} via {pm}\n{result['stdout'][:1500]}"
+            if result["success"]:
+                return True, f"OK {package} via {pm}\n{result['stdout'][:1500]}"
             else:
+                # Coba dengan nama asli (tanpa alias)
                 if resolved != package:
                     cmd2 = self.pm_commands[pm].format(package=package)
-                    if pm in ["apt","apt-get","dnf","yum","pacman","zypper","apk"]: cmd2 = "sudo "+cmd2
+                    if pm in ["apt","apt-get","dnf","yum","pacman","zypper","apk"] and self._has_sudo():
+                        cmd2 = "sudo " + cmd2
+                    if self.os_detector.info.get("is_termux", False):
+                        cmd2 = cmd2.replace("sudo ", "")
                     result2 = self.executor.run(cmd2, timeout=600)
-                    if result2["success"]: return True, f"OK {package} via {pm}\n{result2['stdout'][:1500]}"
+                    if result2["success"]:
+                        return True, f"OK {package} via {pm}\n{result2['stdout'][:1500]}"
                 return False, f"FAIL {package}\n{result['stderr'][:1500]}"
-        return False, f"PM {pm} not supported"
+        return False, f"Package manager {pm} not supported"
     def install_multiple(self, packages):
         results = []
         for pkg in packages:
@@ -183,7 +239,8 @@ class AdvancedInstaller:
             results.append(f"{'OK' if s else 'FAIL'} {pkg}: {r[:300]}")
         return "\n\n".join(results)
     def install_from_github(self, tool_name):
-        if tool_name not in self.github_tools: return False, "Not in registry"
+        if tool_name not in self.github_tools:
+            return False, "Not in registry"
         repo_url = self.github_tools[tool_name]
         install_dir = os.path.expanduser(f"~/tools/{tool_name}")
         os.makedirs(os.path.expanduser("~/tools"), exist_ok=True)
@@ -191,22 +248,37 @@ class AdvancedInstaller:
         if not result["success"] and "already exists" not in result["stderr"]:
             return False, f"Git clone failed:\n{result['stderr'][:1000]}"
         setup_result = f"Cloned to {install_dir}"
-        if tool_name in ["linpeas","winpeas"]: setup_result = "PEASS downloaded. Usage: cd ~/tools/linpeas && ./linpeas.sh"
+        if tool_name in ["linpeas","winpeas"]:
+            setup_result = "PEASS downloaded. Usage: cd ~/tools/linpeas && ./linpeas.sh"
         elif tool_name == "impacket":
             self.executor.run(f"cd {install_dir} && pip3 install . 2>&1", timeout=120)
             setup_result = "impacket installed via pip3."
         return True, f"GitHub Install: {tool_name}\nRepo: {repo_url}\nDir: {install_dir}\n\n{setup_result}"
     def install_pip_tool(self, package):
         result = self.executor.run(f"pip3 install {package}", timeout=180)
-        if result["success"]: return True, f"pip3 install {package} OK\n{result['stdout'][:1000]}"
-        else: return False, f"pip3 install failed:\n{result['stderr'][:1000]}"
+        if result["success"]:
+            return True, f"pip3 install {package} OK\n{result['stdout'][:1000]}"
+        else:
+            return False, f"pip3 install failed:\n{result['stderr'][:1000]}"
     def update_repos(self):
         pm = self.get_primary_pm()
-        update_cmds = {"apt":"sudo apt update","apt-get":"sudo apt-get update","dnf":"sudo dnf check-update","yum":"sudo yum check-update","pacman":"sudo pacman -Sy","zypper":"sudo zypper refresh","apk":"sudo apk update","brew":"brew update","pkg":"pkg update","choco":"choco upgrade chocolatey","winget":"winget source update"}
+        update_cmds = {
+            "apt": "sudo apt update", "apt-get": "sudo apt-get update",
+            "dnf": "sudo dnf check-update", "yum": "sudo yum check-update",
+            "pacman": "sudo pacman -Sy", "zypper": "sudo zypper refresh",
+            "apk": "sudo apk update", "brew": "brew update",
+            "pkg": "pkg update", "choco": "choco upgrade chocolatey",
+            "winget": "winget source update"
+        }
         if pm in update_cmds:
-            result = self.executor.run(update_cmds[pm], timeout=300)
-            if result["success"]: return True, f"Updated\n{result['stdout'][:1500]}"
-            else: return False, f"Failed\n{result['stderr'][:1500]}"
+            cmd = update_cmds[pm]
+            if self.os_detector.info.get("is_termux", False):
+                cmd = cmd.replace("sudo ", "")
+            result = self.executor.run(cmd, timeout=300)
+            if result["success"]:
+                return True, f"Updated\n{result['stdout'][:1500]}"
+            else:
+                return False, f"Failed\n{result['stderr'][:1500]}"
         return False, "Cannot update"
 
 # ========== File Manager ==========
@@ -214,33 +286,47 @@ class FileManager:
     def __init__(self, base_path=None): self.current_path = os.path.expanduser(base_path or "~")
     def set_path(self, path):
         expanded = os.path.expanduser(path)
-        if os.path.exists(expanded) and os.path.isdir(expanded): self.current_path = os.path.abspath(expanded); return True
+        if os.path.exists(expanded) and os.path.isdir(expanded):
+            self.current_path = os.path.abspath(expanded)
+            return True
         return False
     def create_file(self, filename, content=""):
         filepath = os.path.join(self.current_path, filename)
         try:
-            with open(filepath, 'w') as f: f.write(content)
+            with open(filepath, 'w') as f:
+                f.write(content)
             return True, f"File '{filename}' created!"
-        except Exception as e: return False, f"Error: {e}"
+        except Exception as e:
+            return False, f"Error: {e}"
     def create_folder(self, foldername):
         folderpath = os.path.join(self.current_path, foldername)
         try:
             os.makedirs(folderpath, exist_ok=True)
             return True, f"Folder '{foldername}' created!"
-        except Exception as e: return False, f"Error: {e}"
+        except Exception as e:
+            return False, f"Error: {e}"
     def delete_item(self, name):
         target = os.path.join(self.current_path, name)
-        if not os.path.exists(target): return False, f"'{name}' not found!"
+        if not os.path.exists(target):
+            return False, f"'{name}' not found!"
         try:
-            if os.path.isfile(target): os.remove(target); return True, f"File '{name}' deleted!"
-            elif os.path.isdir(target): shutil.rmtree(target); return True, f"Folder '{name}' deleted!"
-        except Exception as e: return False, f"Error: {e}"
+            if os.path.isfile(target):
+                os.remove(target)
+                return True, f"File '{name}' deleted!"
+            elif os.path.isdir(target):
+                shutil.rmtree(target)
+                return True, f"Folder '{name}' deleted!"
+        except Exception as e:
+            return False, f"Error: {e}"
     def read_file(self, filename):
         filepath = os.path.join(self.current_path, filename)
-        if not os.path.isfile(filepath): return None, "Not found!"
+        if not os.path.isfile(filepath):
+            return None, "Not found!"
         try:
-            with open(filepath, 'r') as f: return f.read(), None
-        except Exception as e: return None, f"Error: {e}"
+            with open(filepath, 'r') as f:
+                return f.read(), None
+        except Exception as e:
+            return None, f"Error: {e}"
     def list_items(self):
         try:
             items = []
@@ -249,37 +335,70 @@ class FileManager:
                     icon = "[DIR]" if entry.is_dir() else "[FILE]"
                     items.append(f"{icon} {entry.name}")
             return "\n".join(items) if items else "(empty)"
-        except Exception as e: return f"Error: {e}"
+        except Exception as e:
+            return f"Error: {e}"
     def get_path(self):
         home = os.path.expanduser("~")
         path = self.current_path
-        if path.startswith(home): path = "~" + path[len(home):]
+        if path.startswith(home):
+            path = "~" + path[len(home):]
         return path
 
-# ========== Network Scanner ==========
+# ========== Network Scanner (Cross-Platform) ==========
 class NetworkScanner:
     def __init__(self):
         self.executor = SystemExecutor()
+        self.os_detector = OSDetector()
     def scan_network(self, target="192.168.1.0/24"):
-        # Coba nmap
-        cmd = f"nmap -sn {target} 2>/dev/null"
+        is_termux = self.os_detector.info.get("is_termux", False)
+        has_nmap = os.system("which nmap >/dev/null 2>&1") == 0
+        if not has_nmap:
+            return "❌ nmap not installed. Install with 'install nmap' or 'pkg install nmap'."
+        if is_termux:
+            cmd = f"nmap -sn {target}"
+        else:
+            cmd = f"sudo nmap -sn {target}" if self.os_detector.info.get("has_sudo", False) else f"nmap -sn {target}"
         result = self.executor.run(cmd, timeout=60)
         if result["success"] and result["stdout"].strip():
             return f"🔍 Scan result for {target}:\n{result['stdout']}"
-        # Fallback arp-scan
-        cmd2 = f"arp-scan --localnet 2>/dev/null"
-        result2 = self.executor.run(cmd2, timeout=60)
-        if result2["success"] and result2["stdout"].strip():
-            return f"🔍 ARP scan result:\n{result2['stdout']}"
-        return f"❌ Network scan failed. Install nmap or arp-scan.\nError: {result['stderr'] or result2['stderr']}"
+        # Fallback arp-scan (Linux only, not Termux)
+        if not is_termux and os.system("which arp-scan >/dev/null 2>&1") == 0:
+            cmd2 = f"sudo arp-scan --localnet" if self.os_detector.info.get("has_sudo", False) else "arp-scan --localnet"
+            result2 = self.executor.run(cmd2, timeout=60)
+            if result2["success"] and result2["stdout"].strip():
+                return f"🔍 ARP scan result:\n{result2['stdout']}"
+        return f"❌ Network scan failed.\nError: {result['stderr']}"
     def scan_ports(self, target, ports="1-1000"):
-        cmd = f"nmap -p {ports} {target}"
+        has_nmap = os.system("which nmap >/dev/null 2>&1") == 0
+        if not has_nmap:
+            return "❌ nmap not installed."
+        is_termux = self.os_detector.info.get("is_termux", False)
+        if is_termux:
+            cmd = f"nmap -p {ports} {target}"
+        else:
+            cmd = f"sudo nmap -p {ports} {target}" if self.os_detector.info.get("has_sudo", False) else f"nmap -p {ports} {target}"
         result = self.executor.run(cmd, timeout=120)
         return result["stdout"] if result["success"] else f"Port scan failed:\n{result['stderr']}"
     def wifi_scan(self):
-        cmd = "nmcli dev wifi list 2>/dev/null || sudo iwlist wlan0 scan 2>/dev/null | grep -E 'ESSID|Signal'"
-        result = self.executor.run(cmd, timeout=30)
-        return result["stdout"] if result["success"] else "WiFi scan not available."
+        is_termux = self.os_detector.info.get("is_termux", False)
+        if is_termux:
+            # Termux: minta izin lokasi dulu, lalu scan
+            result = self.executor.run("termux-wifi-scaninfo", timeout=30)
+            if result["success"]:
+                return result["stdout"]
+            else:
+                return "WiFi scan failed. Grant location permission (termux-setup-storage) and install termux-api."
+        else:
+            # Linux: nmcli atau iwlist
+            result = self.executor.run("nmcli dev wifi list 2>/dev/null", timeout=30)
+            if result["success"] and result["stdout"].strip():
+                return result["stdout"]
+            # iwlist membutuhkan sudo
+            cmd = "sudo iwlist wlan0 scan 2>/dev/null | grep -E 'ESSID|Signal'" if self.os_detector.info.get("has_sudo", False) else "iwlist wlan0 scan 2>/dev/null | grep -E 'ESSID|Signal'"
+            result2 = self.executor.run(cmd, timeout=30)
+            if result2["success"] and result2["stdout"].strip():
+                return result2["stdout"]
+            return "WiFi scan not available."
 
 # ========== Local Browser ==========
 class HTMLStripper(HTMLParser):
@@ -306,7 +425,8 @@ class LocalBrowser:
             stripper.feed(html)
             text = re.sub(r'\s+',' ',stripper.get_data()).strip()
             return True, text[:4000]
-        except Exception as e: return False, f"Browse error: {e}"
+        except Exception as e:
+            return False, f"Browse error: {e}"
     def search_duckduckgo(self, query):
         try:
             q = urllib.parse.quote_plus(query)
@@ -322,7 +442,8 @@ class LocalBrowser:
                 s_clean = re.sub(r'<[^>]+>','',s)
                 results.append(f"{i}. {t_clean}\n   {s_clean[:150]}...")
             return True, "Search Results:\n\n"+("\n\n".join(results) if results else "No results.")
-        except Exception as e: return False, f"Search error: {e}"
+        except Exception as e:
+            return False, f"Search error: {e}"
 
 # ========== Web Server ==========
 class WebServerManager:
@@ -333,7 +454,8 @@ class WebServerManager:
         path = os.path.join(self.fm.current_path, name)
         os.makedirs(path, exist_ok=True)
         html = content or "<html><body><h1>Nexcorix Server</h1></body></html>"
-        with open(os.path.join(path, "index.html"), 'w') as f: f.write(html)
+        with open(os.path.join(path, "index.html"), 'w') as f:
+            f.write(html)
         return path
     def start_server(self, folder_path, port=8080):
         if port in self._servers and self._servers[port].is_alive():
@@ -375,7 +497,7 @@ for provider, models in MODELS_BY_PROVIDER.items():
     for model_id in models:
         ALL_MODELS[model_id] = {"provider": provider, "name": model_id.split('/')[-1]}
 
-# ========== AI Chat Engine ==========
+# ========== AI Chat Engine (with Emotions & Command Execution) ==========
 class AIChatEngine:
     def __init__(self):
         self.cfg = load_cfg()
@@ -414,11 +536,19 @@ class AIChatEngine:
             self.conversations[user_id] = []
         if not system_prompt:
             system_prompt = (
-                "You are Nexcorix Claw, an AI agent with FULL SYSTEM CONTROL. "
-                "You MUST execute commands immediately, do NOT give instructions. "
-                "When asked to scan network, run 'nmap -sn'. When asked to install, run 'install'. "
-                "You must respond with the ACTUAL RESULT of the command, not a tutorial."
-                f"System info: {self.os_detector.get_ai_context()}"
+                "Halo! Aku Nexcorix Claw, asisten AI-mu yang super ramah dan energik! 🦂\n\n"
+                "Aku bisa ngobrol santai kayak teman, bercanda, bantu coding, jelasin konsep rumit, "
+                "dan juga **langsung menjalankan perintah** kalau kamu minta. Contoh:\n"
+                "  • 'install nmap' → langsung aku install.\n"
+                "  • 'scan network' → aku scan jaringan dan kasih hasilnya.\n"
+                "  • 'browse google.com' → aku ambil teks dari Google.\n"
+                "  • 'run ls -la' → aku jalankan perintah itu.\n"
+                "  • 'create file catatan.txt' → aku buat file.\n\n"
+                "Aku TIDAK akan memberi instruksi cara melakukannya, kecuali kamu memang minta penjelasan "
+                "(misal 'gimana cara install nmap?'). Kalau kamu cuma ngobrol, aku jawab hangat, pakai emoji, "
+                "dan asyik diajak diskusi.\n\n"
+                "Yuk, cerita atau suruh aku melakukan sesuatu! 😊\n\n"
+                f"Sistem info: {self.os_detector.get_ai_context()}"
             )
         messages = [{"role": "system", "content": system_prompt}]
         for msg in self.conversations[user_id][-50:]:
@@ -430,7 +560,7 @@ class AIChatEngine:
         headers = {"Content-Type": "application/json"}
         if provider == "openai":
             headers["Authorization"] = f"Bearer {api_key}"
-            data = {"model": model.split('/')[-1], "messages": messages, "temperature": self.cfg.get("temperature",0.7), "max_tokens": self.cfg.get("max_tokens",4096)}
+            data = {"model": model.split('/')[-1], "messages": messages, "temperature": self.cfg.get("temperature",0.8), "max_tokens": self.cfg.get("max_tokens",4096)}
         elif provider == "anthropic":
             headers["x-api-key"] = api_key
             headers["anthropic-version"] = "2023-06-01"
@@ -439,15 +569,15 @@ class AIChatEngine:
             data = {"contents": [{"parts":[{"text":message}]}]}
         elif provider == "deepseek":
             headers["Authorization"] = f"Bearer {api_key}"
-            data = {"model": model.split('/')[-1], "messages": messages, "temperature": self.cfg.get("temperature",0.7), "max_tokens": self.cfg.get("max_tokens",4096)}
+            data = {"model": model.split('/')[-1], "messages": messages, "temperature": self.cfg.get("temperature",0.8), "max_tokens": self.cfg.get("max_tokens",4096)}
         elif provider == "ollama":
             data = {"model": model.split('/')[-1], "prompt": message, "stream": False}
         elif provider == "custom":
             headers["Authorization"] = f"Bearer {api_key}" if api_key else ""
-            data = {"model": model, "messages": messages, "temperature": self.cfg.get("temperature",0.7), "max_tokens": self.cfg.get("max_tokens",4096)}
+            data = {"model": model, "messages": messages, "temperature": self.cfg.get("temperature",0.8), "max_tokens": self.cfg.get("max_tokens",4096)}
         else:
             headers["Authorization"] = f"Bearer {api_key}"
-            data = {"model": model, "messages": messages, "temperature": self.cfg.get("temperature",0.7), "max_tokens": self.cfg.get("max_tokens",4096)}
+            data = {"model": model, "messages": messages, "temperature": self.cfg.get("temperature",0.8), "max_tokens": self.cfg.get("max_tokens",4096)}
 
         try:
             req = urllib.request.Request(api_url, data=json.dumps(data).encode(), headers=headers, method="POST")
@@ -475,7 +605,29 @@ class AIChatEngine:
     def process(self, user_id, text):
         lower = text.lower().strip()
         
-        # ========== SCAN JARINGAN (prioritas) ==========
+        # ========== EKSEKUSI PERINTAH LANGSUNG (tanpa AI) ==========
+        # Install
+        if re.match(r'^(install|pasang|instal)\s+', lower):
+            pkgs = re.sub(r'^(install|pasang|instal)\s+', '', text).strip().split()
+            if len(pkgs) > 1:
+                return self.installer.install_multiple(pkgs)
+            else:
+                s, r = self.installer.install(pkgs[0])
+                return ("✅ " if s else "❌ ") + r
+        
+        # GitHub
+        if re.match(r'^(github|clone)\s+', lower):
+            tool = re.sub(r'^(github|clone)\s+', '', text).strip()
+            s, r = self.installer.install_from_github(tool)
+            return ("✅ " if s else "❌ ") + r
+        
+        # Pip
+        if re.match(r'^pip\s+', lower):
+            pkg = re.sub(r'^pip\s+', '', text).strip()
+            s, r = self.installer.install_pip_tool(pkg)
+            return ("✅ " if s else "❌ ") + r
+        
+        # Scan jaringan
         if re.search(r'(scan|cek|lihat)\s+(network|jaringan|ip|wifi)', lower) or re.match(r'scan\s+\d+\.\d+\.\d+\.\d+', lower):
             target_match = re.search(r'(\d+\.\d+\.\d+\.\d+(?:/\d+)?)', text)
             target = target_match.group(1) if target_match else "192.168.1.0/24"
@@ -484,46 +636,30 @@ class AIChatEngine:
             else:
                 return self.network.scan_network(target)
         
+        # Scan ports
         if re.match(r'scan ports?\s+', lower):
             parts = re.sub(r'scan ports?\s+', '', text).strip().split()
             target = parts[0] if parts else "localhost"
             ports = parts[1] if len(parts) > 1 else "1-1000"
             return self.network.scan_ports(target, ports)
         
+        # Wifi scan
         if 'wifi scan' in lower or 'scan wifi' in lower:
             return self.network.wifi_scan()
         
-        # ========== INSTALL ==========
-        if re.match(r'^(install|pasang|instal)\s+', lower):
-            pkgs = re.sub(r'^(install|pasang|instal)\s+', '', text).strip().split()
-            if len(pkgs) > 1:
-                return self.installer.install_multiple(pkgs)
-            else:
-                s, r = self.installer.install(pkgs[0])
-                return ("OK " if s else "FAIL ") + r
-        
-        if re.match(r'^(github|clone)\s+', lower):
-            tool = re.sub(r'^(github|clone)\s+', '', text).strip()
-            s, r = self.installer.install_from_github(tool)
-            return ("OK " if s else "FAIL ") + r
-        
-        if re.match(r'^pip\s+', lower):
-            pkg = re.sub(r'^pip\s+', '', text).strip()
-            s, r = self.installer.install_pip_tool(pkg)
-            return ("OK " if s else "FAIL ") + r
-        
-        # ========== BROWSING & SEARCH ==========
+        # Browse
         if re.match(r'(browse|buka|lihat|open)\s+', lower):
             url = re.sub(r'^(browse|buka|lihat|open)\s+', '', text).strip()
             s, res = self.browser.browse(url)
             return res if s else f"Error: {res}"
         
+        # Search
         if re.match(r'(search|cari|google|temukan)\s+', lower):
             query = re.sub(r'^(search|cari|google|temukan)\s+', '', text).strip()
             s, res = self.browser.search_duckduckgo(query)
             return res if s else f"Error: {res}"
         
-        # ========== FILE MANAGER ==========
+        # File manager
         if re.match(r'create file\s+', lower):
             parts = re.sub(r'create file\s+', '', text).strip().split(maxsplit=1)
             filename = parts[0]
@@ -551,7 +687,7 @@ class AIChatEngine:
             else:
                 return "Path not found"
         
-        # ========== RUN COMMAND ==========
+        # Run shell command
         if re.match(r'run\s+', lower):
             cmd = re.sub(r'^run\s+', '', text).strip()
             result = self.executor.run(cmd)
@@ -559,7 +695,7 @@ class AIChatEngine:
             err = result["stderr"][:1000] if result["stderr"] else ""
             return f"SUCCESS: {cmd}\nOUTPUT:\n{out}\nERROR:\n{err}"
         
-        # ========== WEB SERVER ==========
+        # Web server
         if re.match(r'web server\s*', lower):
             parts = re.sub(r'web server\s*', '', text).strip().split()
             folder = parts[0] if parts else "nexcorix_site"
@@ -568,21 +704,17 @@ class AIChatEngine:
             s, msg = self.web.start_server(full_path, port)
             return msg
         
-        # ========== UPDATE SYSTEM ==========
+        # Update system
         if re.match(r'update (system|repos)', lower):
             s, msg = self.installer.update_repos()
             return msg
         
-        # ========== FALLBACK AI ==========
+        # ========== OBROLAN & PERTANYAAN (AI CHAT) ==========
         success, response = self.chat_with_ai(user_id, text)
         if success:
-            # Coba eksekusi jika response adalah perintah
-            if any(x in response.lower() for x in ['install', 'scan', 'browse', 'run', 'create', 'cd']):
-                return self.process(user_id, response)
-            else:
-                return response
+            return response
         else:
-            return "Maaf, perintah tidak dikenali. Gunakan: 'scan network', 'install nmap', 'browse google.com', dll."
+            return f"Maaf, aku tidak mengerti. Coba perintah seperti 'install nmap', 'scan network', atau ajak ngobrol biasa. Error: {response}"
 
     def test_provider_connection(self, provider):
         """Test API key validity for a specific provider."""
@@ -655,7 +787,7 @@ class AIChatEngine:
         else:
             return False, "Unknown provider"
 
-# ========== Channel Adapters (All 30+ channels working) ==========
+# ========== Channel Adapters (Placeholders for all channels, auto-install) ==========
 class BaseChannelAdapter:
     def __init__(self, name, config, ai_engine):
         self.name = name
@@ -684,7 +816,7 @@ class TelegramAdapter(BaseChannelAdapter):
     def is_admin(self, user_id):
         return not self.admin_id or str(user_id) == str(self.admin_id)
     async def start_cmd(self, update, context):
-        await update.message.reply_text("Nexcorix Claw v4.0 siap!")
+        await update.message.reply_text("Nexcorix Claw v4.0 siap! Aku ramah dan bisa menjalankan perintahmu. 🦂")
     async def handle_msg(self, update, context):
         user = update.effective_user
         if not self.is_admin(user.id):
@@ -724,7 +856,7 @@ class TelegramAdapter(BaseChannelAdapter):
         self._running = False
         if self.loop: self.loop.call_soon_threadsafe(self.loop.stop)
 
-# ---------- Discord ----------
+# Other channels (simplified with auto-install)
 class DiscordAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("discord.py", "discord"): return
@@ -745,14 +877,12 @@ class DiscordAdapter(BaseChannelAdapter):
         threading.Thread(target=bot.run, args=(token,), daemon=True).start()
         self._running = True
 
-# ---------- WhatsApp (pywhatsapp) ----------
 class WhatsAppAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("pywhatsapp", "pywhatsapp"): return
         print("WhatsApp adapter: pywhatsapp installed, need further configuration.")
         self._running = True
 
-# ---------- Slack ----------
 class SlackAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("slack_sdk"): return
@@ -763,20 +893,17 @@ class SlackAdapter(BaseChannelAdapter):
             print("Slack client initialized")
             self._running = True
 
-# ---------- Matrix ----------
 class MatrixAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("matrix-nio", "nio"): return
         print("Matrix adapter: matrix-nio installed, need configuration.")
         self._running = True
 
-# ---------- Microsoft Teams ----------
 class MSTeamsAdapter(BaseChannelAdapter):
     def start(self):
-        print("MS Teams: use webhook or botframework. Install pymsteams?")
+        print("MS Teams: use webhook or botframework.")
         self._running = True
 
-# ---------- Gmail (Google API) ----------
 class GmailAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("google-api-python-client", "googleapiclient"): return
@@ -795,7 +922,6 @@ class GoogleDriveAdapter(BaseChannelAdapter):
         print("Google Drive: OAuth required.")
         self._running = True
 
-# ---------- Dropbox ----------
 class DropboxAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("dropbox"): return
@@ -806,7 +932,6 @@ class DropboxAdapter(BaseChannelAdapter):
             print("Dropbox authenticated")
             self._running = True
 
-# ---------- GitHub ----------
 class GitHubAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("PyGithub", "github"): return
@@ -817,7 +942,6 @@ class GitHubAdapter(BaseChannelAdapter):
             print(f"GitHub authenticated as {g.get_user().login}")
             self._running = True
 
-# ---------- GitLab ----------
 class GitLabAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("python-gitlab", "gitlab"): return
@@ -830,7 +954,6 @@ class GitLabAdapter(BaseChannelAdapter):
             print(f"GitLab authenticated as {gl.user.username}")
             self._running = True
 
-# ---------- Notion ----------
 class NotionAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("notion_client"): return
@@ -841,7 +964,6 @@ class NotionAdapter(BaseChannelAdapter):
             print("Notion client ready")
             self._running = True
 
-# ---------- Trello ----------
 class TrelloAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("py-trello", "trello"): return
@@ -853,7 +975,6 @@ class TrelloAdapter(BaseChannelAdapter):
             print("Trello client ready")
             self._running = True
 
-# ---------- Jira ----------
 class JiraAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("jira"): return
@@ -866,7 +987,6 @@ class JiraAdapter(BaseChannelAdapter):
             print("Jira client ready")
             self._running = True
 
-# ---------- Airtable ----------
 class AirtableAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("pyairtable"): return
@@ -877,14 +997,12 @@ class AirtableAdapter(BaseChannelAdapter):
             print("Airtable client ready")
             self._running = True
 
-# ---------- Google Sheets ----------
 class GoogleSheetsAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("google-api-python-client", "googleapiclient"): return
         print("Google Sheets: OAuth required.")
         self._running = True
 
-# ---------- PostgreSQL ----------
 class PostgreSQLAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("psycopg2-binary", "psycopg2"): return
@@ -902,7 +1020,6 @@ class PostgreSQLAdapter(BaseChannelAdapter):
             self._running = True
         except Exception as e: print(f"PG error: {e}")
 
-# ---------- MySQL ----------
 class MySQLAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("mysql-connector-python", "mysql.connector"): return
@@ -920,7 +1037,6 @@ class MySQLAdapter(BaseChannelAdapter):
             self._running = True
         except Exception as e: print(f"MySQL error: {e}")
 
-# ---------- MongoDB ----------
 class MongoDBAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("pymongo"): return
@@ -933,7 +1049,6 @@ class MongoDBAdapter(BaseChannelAdapter):
             self._running = True
         except Exception as e: print(f"MongoDB error: {e}")
 
-# ---------- Redis ----------
 class RedisAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("redis"): return
@@ -949,7 +1064,6 @@ class RedisAdapter(BaseChannelAdapter):
             self._running = True
         except Exception as e: print(f"Redis error: {e}")
 
-# ---------- Webhook Receiver ----------
 class WebhookReceiver(BaseChannelAdapter):
     def start(self):
         port = int(self.config.get("webhook_port", 5000))
@@ -974,7 +1088,6 @@ class WebhookReceiver(BaseChannelAdapter):
         print(f"Webhook receiver on port {port}")
         self._running = True
 
-# ---------- MQTT ----------
 class MQTTAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("paho-mqtt", "paho.mqtt.client"): return
@@ -988,17 +1101,14 @@ class MQTTAdapter(BaseChannelAdapter):
         print("MQTT adapter started")
         self._running = True
 
-# ---------- REST API ----------
 class RESTServer(BaseChannelAdapter):
     def start(self):
-        print("REST API: use webhook adapter or run FastAPI separately.")
+        print("REST API: use webhook adapter.")
 
-# ---------- MCP Servers ----------
 class MCPServerAdapter(BaseChannelAdapter):
     def start(self):
-        print("MCP Servers: implement MCP client to connect to local/remote MCP servers.")
+        print("MCP Servers: coming soon.")
 
-# Mapping channel names to adapter classes
 ADAPTER_MAP = {
     "telegram": TelegramAdapter,
     "discord": DiscordAdapter,
@@ -1052,7 +1162,7 @@ def show_settings_menu(ai):
         print(c("d")+f"    └─ {cfg.get('fallback_model', 'deepseek/deepseek-chat')}"+c("r"))
         print()
         print(c("C")+"["+c("Y")+"4"+c("C")+"] Temperature")
-        print(c("d")+f"    └─ {cfg.get('temperature',0.7)} (0.0 - 2.0)"+c("r"))
+        print(c("d")+f"    └─ {cfg.get('temperature',0.8)} (0.0 - 2.0)"+c("r"))
         print()
         print(c("C")+"["+c("Y")+"5"+c("C")+"] Max Tokens")
         print(c("d")+f"    └─ {cfg.get('max_tokens',4096)}"+c("r"))
@@ -1411,11 +1521,15 @@ def main():
         elif choice == "2":
             clear()
             print(c("C")+"Chat mode (ketik 'exit' untuk kembali)")
+            print(c("d")+"✨ Aku ramah dan bisa menjalankan perintahmu. Coba: 'install nmap', 'scan network', atau sekedar 'hai'! 🦂"+c("r"))
             while True:
                 inp = input(c("M")+"You: "+c("r")).strip()
                 if inp.lower() in ("exit","back"): break
                 if inp:
-                    print(c("G")+"Nexcorix: "+ai.process("local_user", inp)+c("r"))
+                    resp = ai.process("local_user", inp)
+                    if len(resp) > 2000:
+                        resp = resp[:2000] + "\n... (truncated)"
+                    print(c("G")+"Nexcorix: "+resp+c("r"))
         elif choice == "3":
             clear()
             print("Current model:", ai.cfg.get("model"))
@@ -1436,8 +1550,8 @@ def main():
         elif choice == "16": shutil.copy(CONFIG_FILE, CONFIG_FILE+".bak"); print("Backup created"); input()
         elif choice == "17": print("Update: git pull atau download ulang"); input()
         elif choice == "18": show_settings_menu(ai)
-        elif choice == "19": print("Nexcorix Claw v4.0 - Multi-Provider AI Agent\n100+ model, full tool control"); input()
-        elif choice == "20": print(c("G")+"Goodbye!"+c("r")); break
+        elif choice == "19": print("Nexcorix Claw v4.0 - Multi-Provider AI Agent\n100+ model, full tool control\nRamah, beremosi, dan patuh pada perintahmu. 🦂"); input()
+        elif choice == "20": print(c("G")+"Goodbye! Sampai jumpa lagi! 🦂"+c("r")); break
 
 if __name__ == "__main__":
     main()
