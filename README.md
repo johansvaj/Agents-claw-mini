@@ -1,35 +1,201 @@
- <div align="center">
+<div align="center">
 
-<img width="180" src="https://raw.githubusercontent.com/github/explore/main/topics/artificial-intelligence/artificial-intelligence.png">
+<img src="assets/logo.png" width="180">
 
-# 🚀 NEXCORIX CLAW
+# 🦂 NEXCORIX CLAW
 
-<img src="https://capsule-render.vercel.app/api?type=waving&height=300&color=0:00C6FF,50:6A5AFF,100:A855F7&text=NEXCORIX%20CLAW&fontSize=65&fontAlignY=40&animation=twinkling" />
+### Next-Generation AI Agent Framework
 
-<img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=28&duration=3000&pause=800&color=00E7FF&center=true&width=900&lines=Next-Generation+AI+Agent+Platform;Multi-Agent+Orchestration;Persistent+Memory+System;MCP+Server+Integration;Automation+Without+Limits" />
+<img src="https://capsule-render.vercel.app/api?type=waving&height=250&color=0:00C6FF,50:6A5AFF,100:A855F7&text=NEXCORIX%20CLAW&fontSize=55&animation=twinkling" />
 
-<br>
+<img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=25&duration=3000&pause=800&color=00E7FF&center=true&width=900&lines=Next-Generation+AI+Agent+Framework;Multi-Agent+Intelligence;Persistent+Memory+System;MCP+Integration;Create+Automate+Innovate" />
 
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-1.0.0-green?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-0.4.0-green?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-3.10+-yellow?style=for-the-badge)
+![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-purple?style=for-the-badge)
+![AI](https://img.shields.io/badge/AI-Agent_Framework-red?style=for-the-badge)
+![Memory](https://img.shields.io/badge/Memory-Persistent-cyan?style=for-the-badge)
+![MCP](https://img.shields.io/badge/MCP-Supported-orange?style=for-the-badge)
 
 </div>
+
+## 🎬 Demo
+
+<p align="center">
+  <img src="assets/VID-20260609-WA0009.gif" width="100%">
+</p>
 
 ---
 
 # 🌌 Overview
 
-Nexcorix Claw adalah framework AI Agent modern yang dirancang untuk:
+Nexcorix Claw adalah framework AI Agent modern yang dirancang untuk membangun agent cerdas, memory system, MCP integration, automation workflow, dan ekosistem plugin yang fleksibel.
 
-- 🤖 Autonomous Agents
-- 🧠 Long-Term Memory
-- 🔌 MCP Integration
-- ⚡ High Performance Runtime
-- 🛠️ Custom Skills & Plugins
-- 🌐 API Connectivity
-- 📂 File Management
-- 🔒 Secure Execution
+---
+
+# ✨ Features
+
+## 🤖 Multi-Agent System
+
+- Autonomous Agents
+- Task Planning
+- Workflow Execution
+- Agent Collaboration
+- Dynamic Routing
+
+## 🧠 Persistent Memory
+
+- Long-Term Memory
+- Semantic Search
+- Context Retrieval
+- Knowledge Storage
+- Memory Sync
+
+## 🔌 MCP Integration
+
+- Filesystem
+- Browser
+- GitHub
+- Database
+- Custom MCP Servers
+
+## 🛠️ Plugin Ecosystem
+
+- Custom Plugins
+- Skills System
+- Tools Integration
+- External APIs
+
+## 🔒 Security
+
+- Sandboxed Runtime
+- Permission Control
+- Secure Execution
+- Session Isolation
+
+## ⚡ Performance
+
+- Fast Runtime
+- Async Tasks
+- Efficient Resource Usage
+- Scalable Architecture
+
+---
+
+# 🚀 Quick Start
+
+Clone repository:
+
+```bash
+git clone https://github.com/Nexcorix/Nexcorix-Claw.git
+cd Nexcorix-Claw
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Run:
+
+```bash
+python main.py
+```
+
+---
+
+# 📦 Installation
+
+## Windows
+
+```bash
+git clone https://github.com/Nexcorix/Nexcorix-Claw.git
+
+cd Nexcorix-Claw
+
+python -m venv venv
+
+venv\Scripts\activate
+
+pip install -r requirements.txt
+
+python main.py
+```
+
+## Linux
+
+```bash
+git clone https://github.com/Nexcorix/Nexcorix-Claw.git
+
+cd Nexcorix-Claw
+
+python3 -m venv venv
+
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+python3 main.py
+```
+
+## macOS
+
+```bash
+git clone https://github.com/Nexcorix/Nexcorix-Claw.git
+
+cd Nexcorix-Claw
+
+python3 -m venv venv
+
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+python3 main.py
+```
+
+---
+
+# 🎯 Usage
+
+Create Agent
+
+```bash
+nexcorix create-agent
+```
+
+Run Agent
+
+```bash
+nexcorix run --agent coder
+```
+
+List Agents
+
+```bash
+nexcorix list-agents
+```
+
+Memory Sync
+
+```bash
+nexcorix memory sync
+```
+
+Memory Search
+
+```bash
+nexcorix memory search "project"
+```
+
+MCP Status
+
+```bash
+nexcorix mcp status
+```
 
 ---
 
@@ -42,97 +208,29 @@ Nexcorix Claw adalah framework AI Agent modern yang dirancang untuk:
                  │   NEXCORIX CLAW   │
                  └─────────┬─────────┘
                            │
-        ┌──────────────────┼──────────────────┐
-        │                  │                  │
-        ▼                  ▼                  ▼
 
-      🧠 Memory         🤖 Agents         🔌 MCP
+      ┌────────────────────┼────────────────────┐
+      │                    │                    │
 
-        │                  │                  │
+      ▼                    ▼                    ▼
 
-   ┌────┴────┐       ┌─────┴─────┐      ┌────┴────┐
-   │Vector DB│       │Task Engine│      │Servers  │
-   └────┬────┘       └─────┬─────┘      └────┬────┘
-        │                  │                  │
+   🧠 Memory           🤖 Agents            🔌 MCP
 
-        └──────────┬───────┴───────┬──────────┘
-                   ▼               ▼
+      │                    │                    │
 
-              🛠️ Tools        🌐 APIs
+ ┌────┴────┐         ┌─────┴─────┐       ┌────┴────┐
+ │Vector DB│         │Task Engine│       │Servers  │
+ └────┬────┘         └─────┬─────┘       └────┬────┘
+
+      └──────────────┬─────┴─────┬────────────┘
+                     ▼           ▼
+
+                 🛠️ Tools    🌐 APIs
 ```
 
 ---
 
-# ✨ Features
-
-## 🤖 AI Agent System
-
-- Multi-Agent Coordination
-- Autonomous Planning
-- Task Execution
-- Workflow Automation
-
-## 🧠 Memory Engine
-
-- Persistent Memory
-- Semantic Search
-- Context Management
-- Knowledge Storage
-
-## 🔌 MCP Support
-
-- Filesystem
-- Browser
-- GitHub
-- Database
-- Custom MCP Server
-
-## 🛠️ Extensibility
-
-- Plugins
-- Skills
-- Tools
-- External APIs
-
----
-
-# 📦 Installation
-
-```bash
-git clone https://github.com/Nexcorix/Nexcorix-Claw.git
-cd Nexcorix-Claw
-npm install
-```
-
----
-
-# 🚀 Quick Start
-
-```bash
-npm run dev
-```
-
-Create Agent
-
-```bash
-nexcorix create-agent
-```
-
-Run Task
-
-```bash
-nexcorix run "Build a Discord Bot"
-```
-
-Sync Memory
-
-```bash
-nexcorix memory sync
-```
-
----
-
-# 📁 Structure
+# 📁 Project Structure
 
 ```text
 Nexcorix-Claw/
@@ -147,8 +245,13 @@ Nexcorix-Claw/
 │
 ├── plugins/
 ├── configs/
-├── assets/
 ├── docs/
+├── assets/
+│   ├── logo.png
+│   └── VID-20260609-WA0009.gif
+│
+├── requirements.txt
+├── main.py
 └── README.md
 ```
 
@@ -166,443 +269,51 @@ Nexcorix-Claw/
 
 ---
 
-# 📈 Development Roadmap
+# 📊 Feature Matrix
 
-- [x] Agent Runtime
-- [x] Memory Engine
-- [x] Plugin System
-- [x] MCP Integration
-- [ ] Visual Workflow Builder
-- [ ] Mobile Dashboard
-- [ ] Distributed Agents
-- [ ] Cloud Runtime
+| Feature | Supported |
+|----------|----------|
+| Multi-Agent | ✅ |
+| MCP | ✅ |
+| Memory | ✅ |
+| Plugins | ✅ |
+| Tools | ✅ |
+| API Access | ✅ |
+| Local Models | ✅ |
+| Cloud Runtime | 🚧 |
+| Mobile App | 🚧 |
 
 ---
 
-# 🐍 Contribution Activity
+# 📈 Roadmap
 
-<p align="center">
-<img src="https://raw.githubusercontent.com/Nexcorix/Nexcorix/output/snake.svg">
-</p>
+- [x] Core Runtime
+- [x] Agent System
+- [x] Memory Engine
+- [x] MCP Integration
+- [x] Plugin Loader
+- [ ] Visual Workflow Builder
+- [ ] Mobile Dashboard
+- [ ] Distributed Runtime
+- [ ] Cloud Platform
+- [ ] Team Collaboration
+- [ ] Marketplace
 
 ---
 
 # 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome.
-
 ```bash
-fork → code → commit → pull request
+fork
+↓
+code
+↓
+commit
+↓
+pull request
 ```
 
----
-
-# 📜 License
-
-MIT License
-
----
-<div align="center">
-
-<img width="180" src="https://raw.githubusercontent.com/github/explore/main/topics/artificial-intelligence/artificial-intelligence.png">
-
-# 🚀 NEXCORIX CLAW
-
-<img src="https://capsule-render.vercel.app/api?type=waving&height=300&color=0:00C6FF,50:6A5AFF,100:A855F7&text=NEXCORIX%20CLAW&fontSize=65&fontAlignY=40&animation=twinkling" />
-
-<img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=28&duration=3000&pause=800&color=00E7FF&center=true&width=900&lines=Next-Generation+AI+Agent+Platform;Multi-Agent+Orchestration;Persistent+Memory+System;MCP+Server+Integration;Automation+Without+Limits" />
-
-<br>
-
-![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-1.0.0-green?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
-
-</div>
-
----
-
-# 🌌 Overview
-
-Nexcorix Claw adalah framework AI Agent modern yang dirancang untuk:
-
-- 🤖 Autonomous Agents
-- 🧠 Long-Term Memory
-- 🔌 MCP Integration
-- ⚡ High Performance Runtime
-- 🛠️ Custom Skills & Plugins
-- 🌐 API Connectivity
-- 📂 File Management
-- 🔒 Secure Execution
-
----
-
-# 🧠 Architecture
-
-```text
-                           ⚡
-                           │
-                 ┌─────────▼─────────┐
-                 │   NEXCORIX CLAW   │
-                 └─────────┬─────────┘
-                           │
-        ┌──────────────────┼──────────────────┐
-        │                  │                  │
-        ▼                  ▼                  ▼
-
-      🧠 Memory         🤖 Agents         🔌 MCP
-
-        │                  │                  │
-
-   ┌────┴────┐       ┌─────┴─────┐      ┌────┴────┐
-   │Vector DB│       │Task Engine│      │Servers  │
-   └────┬────┘       └─────┬─────┘      └────┬────┘
-        │                  │                  │
-
-        └──────────┬───────┴───────┬──────────┘
-                   ▼               ▼
-
-              🛠️ Tools        🌐 APIs
-```
-
----
-
-# ✨ Features
-
-## 🤖 AI Agent System
-
-- Multi-Agent Coordination
-- Autonomous Planning
-- Task Execution
-- Workflow Automation
-
-## 🧠 Memory Engine
-
-- Persistent Memory
-- Semantic Search
-- Context Management
-- Knowledge Storage
-
-## 🔌 MCP Support
-
-- Filesystem
-- Browser
-- GitHub
-- Database
-- Custom MCP Server
-
-## 🛠️ Extensibility
-
-- Plugins
-- Skills
-- Tools
-- External APIs
-
----
-
-# 📦 Installation
-
-```bash
-git clone https://github.com/Nexcorix/Nexcorix-Claw.git
-cd Nexcorix-Claw
-npm install
-```
-
----
-
-# 🚀 Quick Start
-
-```bash
-npm run dev
-```
-
-Create Agent
-
-```bash
-nexcorix create-agent
-```
-
-Run Task
-
-```bash
-nexcorix run "Build a Discord Bot"
-```
-
-Sync Memory
-
-```bash
-nexcorix memory sync
-```
-
----
-
-# 📁 Structure
-
-```text
-Nexcorix-Claw/
-│
-├── src/
-│   ├── agents/
-│   ├── memory/
-│   ├── mcp/
-│   ├── tools/
-│   ├── api/
-│   └── core/
-│
-├── plugins/
-├── configs/
-├── assets/
-├── docs/
-└── README.md
-```
-
----
-
-# 🌐 Supported Models
-
-- OpenAI GPT
-- Claude
-- Gemini
-- DeepSeek
-- Qwen
-- Ollama
-- Local Models
-
----
-
-# 📈 Development Roadmap
-
-- [x] Agent Runtime
-- [x] Memory Engine
-- [x] Plugin System
-- [x] MCP Integration
-- [ ] Visual Workflow Builder
-- [ ] Mobile Dashboard
-- [ ] Distributed Agents
-- [ ] Cloud Runtime
-
----
-
-# 🐍 Contribution Activity
-
-<p align="center">
-<img src="https://raw.githubusercontent.com/Nexcorix/Nexcorix/output/snake.svg">
-</p>
-
----
-
-# 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome.
-
-```bash
-fork → code → commit → pull request
-```
-
----
-
-# 📜 License
-
-MIT License
-
----
-
-<div align="center"><div align="center">
-
-<img width="180" src="https://raw.githubusercontent.com/github/explore/main/topics/artificial-intelligence/artificial-intelligence.png">
-
-# 🚀 NEXCORIX CLAW
-
-<img src="https://capsule-render.vercel.app/api?type=waving&height=300&color=0:00C6FF,50:6A5AFF,100:A855F7&text=NEXCORIX%20CLAW&fontSize=65&fontAlignY=40&animation=twinkling" />
-
-<img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=28&duration=3000&pause=800&color=00E7FF&center=true&width=900&lines=Next-Generation+AI+Agent+Platform;Multi-Agent+Orchestration;Persistent+Memory+System;MCP+Server+Integration;Automation+Without+Limits" />
-
-<br>
-
-![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-1.0.0-green?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
-
-</div>
-
----
-
-# 🌌 Overview
-
-Nexcorix Claw adalah framework AI Agent modern yang dirancang untuk:
-
-- 🤖 Autonomous Agents
-- 🧠 Long-Term Memory
-- 🔌 MCP Integration
-- ⚡ High Performance Runtime
-- 🛠️ Custom Skills & Plugins
-- 🌐 API Connectivity
-- 📂 File Management
-- 🔒 Secure Execution
-
----
-
-# 🧠 Architecture
-
-```text
-                           ⚡
-                           │
-                 ┌─────────▼─────────┐
-                 │   NEXCORIX CLAW   │
-                 └─────────┬─────────┘
-                           │
-        ┌──────────────────┼──────────────────┐
-        │                  │                  │
-        ▼                  ▼                  ▼
-
-      🧠 Memory         🤖 Agents         🔌 MCP
-
-        │                  │                  │
-
-   ┌────┴────┐       ┌─────┴─────┐      ┌────┴────┐
-   │Vector DB│       │Task Engine│      │Servers  │
-   └────┬────┘       └─────┬─────┘      └────┬────┘
-        │                  │                  │
-
-        └──────────┬───────┴───────┬──────────┘
-                   ▼               ▼
-
-              🛠️ Tools        🌐 APIs
-```
-
----
-
-# ✨ Features
-
-## 🤖 AI Agent System
-
-- Multi-Agent Coordination
-- Autonomous Planning
-- Task Execution
-- Workflow Automation
-
-## 🧠 Memory Engine
-
-- Persistent Memory
-- Semantic Search
-- Context Management
-- Knowledge Storage
-
-## 🔌 MCP Support
-
-- Filesystem
-- Browser
-- GitHub
-- Database
-- Custom MCP Server
-
-## 🛠️ Extensibility
-
-- Plugins
-- Skills
-- Tools
-- External APIs
-
----
-
-# 📦 Installation
-
-```bash
-git clone https://github.com/Nexcorix/Nexcorix-Claw.git
-cd Nexcorix-Claw
-npm install
-```
-
----
-
-# 🚀 Quick Start
-
-```bash
-npm run dev
-```
-
-Create Agent
-
-```bash
-nexcorix create-agent
-```
-
-Run Task
-
-```bash
-nexcorix run "Build a Discord Bot"
-```
-
-Sync Memory
-
-```bash
-nexcorix memory sync
-```
-
----
-
-# 📁 Structure
-
-```text
-Nexcorix-Claw/
-│
-├── src/
-│   ├── agents/
-│   ├── memory/
-│   ├── mcp/
-│   ├── tools/
-│   ├── api/
-│   └── core/
-│
-├── plugins/
-├── configs/
-├── assets/
-├── docs/
-└── README.md
-```
-
----
-
-# 🌐 Supported Models
-
-- OpenAI GPT
-- Claude
-- Gemini
-- DeepSeek
-- Qwen
-- Ollama
-- Local Models
-
----
-
-# 📈 Development Roadmap
-
-- [x] Agent Runtime
-- [x] Memory Engine
-- [x] Plugin System
-- [x] MCP Integration
-- [ ] Visual Workflow Builder
-- [ ] Mobile Dashboard
-- [ ] Distributed Agents
-- [ ] Cloud Runtime
-
----
-
-# 🐍 Contribution Activity
-
-<p align="center">
-<img src="https://raw.githubusercontent.com/Nexcorix/Nexcorix/output/snake.svg">
-</p>
-
----
-
-# 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome.
-
-```bash
-fork → code → commit → pull request
-```
+Contributions, issues and feature requests are welcome.
 
 ---
 
@@ -614,240 +325,12 @@ MIT License
 
 <div align="center">
 
-## ⚡ Built For The Future
+## 🦂 NEXCORIX CLAW
 
-### NEXCORIX CLAW
+### Create • Automate • Innovate
 
-Autonomous • Intelligent • Extensible
+Version 0.4.0
 
-</div><div align="center">
-
-<img width="180" src="https://raw.githubusercontent.com/github/explore/main/topics/artificial-intelligence/artificial-intelligence.png">
-
-# 🚀 NEXCORIX CLAW
-
-<img src="https://capsule-render.vercel.app/api?type=waving&height=300&color=0:00C6FF,50:6A5AFF,100:A855F7&text=NEXCORIX%20CLAW&fontSize=65&fontAlignY=40&animation=twinkling" />
-
-<img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=28&duration=3000&pause=800&color=00E7FF&center=true&width=900&lines=Next-Generation+AI+Agent+Platform;Multi-Agent+Orchestration;Persistent+Memory+System;MCP+Server+Integration;Automation+Without+Limits" />
-
-<br>
-
-![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-1.0.0-green?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
-
-</div>
-
----
-
-# 🌌 Overview
-
-Nexcorix Claw adalah framework AI Agent modern yang dirancang untuk:
-
-- 🤖 Autonomous Agents
-- 🧠 Long-Term Memory
-- 🔌 MCP Integration
-- ⚡ High Performance Runtime
-- 🛠️ Custom Skills & Plugins
-- 🌐 API Connectivity
-- 📂 File Management
-- 🔒 Secure Execution
-
----
-
-# 🧠 Architecture
-
-```text
-                           ⚡
-                           │
-                 ┌─────────▼─────────┐
-                 │   NEXCORIX CLAW   │
-                 └─────────┬─────────┘
-                           │
-        ┌──────────────────┼──────────────────┐
-        │                  │                  │
-        ▼                  ▼                  ▼
-
-      🧠 Memory         🤖 Agents         🔌 MCP
-
-        │                  │                  │
-
-   ┌────┴────┐       ┌─────┴─────┐      ┌────┴────┐
-   │Vector DB│       │Task Engine│      │Servers  │
-   └────┬────┘       └─────┬─────┘      └────┬────┘
-        │                  │                  │
-
-        └──────────┬───────┴───────┬──────────┘
-                   ▼               ▼
-
-              🛠️ Tools        🌐 APIs
-```
-
----
-
-# ✨ Features
-
-## 🤖 AI Agent System
-
-- Multi-Agent Coordination
-- Autonomous Planning
-- Task Execution
-- Workflow Automation
-
-## 🧠 Memory Engine
-
-- Persistent Memory
-- Semantic Search
-- Context Management
-- Knowledge Storage
-
-## 🔌 MCP Support
-
-- Filesystem
-- Browser
-- GitHub
-- Database
-- Custom MCP Server
-
-## 🛠️ Extensibility
-
-- Plugins
-- Skills
-- Tools
-- External APIs
-
----
-
-# 📦 Installation
-
-```bash
-git clone https://github.com/Nexcorix/Nexcorix-Claw.git
-cd Nexcorix-Claw
-npm install
-```
-
----
-
-# 🚀 Quick Start
-
-```bash
-npm run dev
-```
-
-Create Agent
-
-```bash
-nexcorix create-agent
-```
-
-Run Task
-
-```bash
-nexcorix run "Build a Discord Bot"
-```
-
-Sync Memory
-
-```bash
-nexcorix memory sync
-```
-
----
-
-# 📁 Structure
-
-```text
-Nexcorix-Claw/
-│
-├── src/
-│   ├── agents/
-│   ├── memory/
-│   ├── mcp/
-│   ├── tools/
-│   ├── api/
-│   └── core/
-│
-├── plugins/
-├── configs/
-├── assets/
-├── docs/
-└── README.md
-```
-
----
-
-# 🌐 Supported Models
-
-- OpenAI GPT
-- Claude
-- Gemini
-- DeepSeek
-- Qwen
-- Ollama
-- Local Models
-
----
-
-# 📈 Development Roadmap
-
-- [x] Agent Runtime
-- [x] Memory Engine
-- [x] Plugin System
-- [x] MCP Integration
-- [ ] Visual Workflow Builder
-- [ ] Mobile Dashboard
-- [ ] Distributed Agents
-- [ ] Cloud Runtime
-
----
-
-# 🐍 Contribution Activity
-
-<p align="center">
-<img src="https://raw.githubusercontent.com/Nexcorix/Nexcorix/output/snake.svg">
-</p>
-
----
-
-# 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome.
-
-```bash
-fork → code → commit → pull request
-```
-
----
-
-# 📜 License
-
-MIT License
-
----
-
-<div align="center">
-
-## ⚡ Built For The Future
-
-### NEXCORIX CLAW
-
-Autonomous • Intelligent • Extensible
-
-</div>
-
-## ⚡ Built For The Future
-
-### NEXCORIX CLAW
-
-Autonomous • Intelligent • Extensible
-
-</div>
-<div align="center">
-
-## ⚡ Built For The Future
-
-### NEXCORIX CLAW
-
-Autonomous • Intelligent • Extensible
+Built For The Future
 
 </div>
