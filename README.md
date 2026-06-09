@@ -1,14 +1,10 @@
 <div align="center">
 
-<img src="assets/logo.png" width="180">
+<img src="./logo.png" width="180">
 
 # 🦂 NEXCORIX CLAW
 
 ### Next-Generation AI Agent Framework
-
-<img src="https://capsule-render.vercel.app/api?type=waving&height=250&color=0:00C6FF,50:6A5AFF,100:A855F7&text=NEXCORIX%20CLAW&fontSize=55&animation=twinkling" />
-
-<img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=25&duration=3000&pause=800&color=00E7FF&center=true&width=900&lines=Next-Generation+AI+Agent+Framework;Multi-Agent+Intelligence;Persistent+Memory+System;MCP+Integration;Create+Automate+Innovate" />
 
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 ![Version](https://img.shields.io/badge/Version-0.4.0-green?style=for-the-badge)
@@ -24,97 +20,80 @@
 ## 🎬 Demo
 
 <p align="center">
-  <img src="assets/VID-20260609-WA0009.gif" width="100%">
+<img src="./VID-20260609-WA0009.gif" width="100%">
 </p>
 
----
+## 🌌 Gambaran Umum
 
-# 🌌 Overview
+Nexcorix Claw adalah framework AI Agent modern yang dirancang untuk membangun agen cerdas, sistem memori, integrasi MCP, otomatisasi workflow, dan ekosistem plugin yang fleksibel.
 
-Nexcorix Claw adalah framework AI Agent modern yang dirancang untuk membangun agent cerdas, memory system, MCP integration, automation workflow, dan ekosistem plugin yang fleksibel.
+## ✨ Fitur
 
----
+### 🤖 Sistem Multi-Agen
 
-# ✨ Features
+- Agen Otonom
+- Perencanaan Tugas
+- Eksekusi Alur Kerja
+- Kolaborasi Agen
+- Perutean Dinamis
 
-## 🤖 Multi-Agent System
+### 🧠 Memori Permanen
 
-- Autonomous Agents
-- Task Planning
-- Workflow Execution
-- Agent Collaboration
-- Dynamic Routing
+- Memori Jangka Panjang
+- Pencarian Semantik
+- Pengambilan Konteks
+- Penyimpanan Pengetahuan
+- Sinkronisasi Memori
 
-## 🧠 Persistent Memory
+### 🔌 Integrasi MCP
 
-- Long-Term Memory
-- Semantic Search
-- Context Retrieval
-- Knowledge Storage
-- Memory Sync
-
-## 🔌 MCP Integration
-
-- Filesystem
+- Sistem Berkas
 - Browser
 - GitHub
-- Database
-- Custom MCP Servers
+- Basis Data
+- Server MCP Kustom
 
-## 🛠️ Plugin Ecosystem
+### 🛠️ Ekosistem Plugin
 
-- Custom Plugins
-- Skills System
-- Tools Integration
-- External APIs
+- Plugin Kustom
+- Sistem Keterampilan
+- Integrasi Alat
+- API Eksternal
 
-## 🔒 Security
+### 🔒 Keamanan
 
-- Sandboxed Runtime
-- Permission Control
-- Secure Execution
-- Session Isolation
+- Runtime Terkotak Pasir
+- Kontrol Izin
+- Eksekusi Aman
+- Isolasi Sesi
 
-## ⚡ Performance
+### ⚡ Performa
 
-- Fast Runtime
-- Async Tasks
-- Efficient Resource Usage
-- Scalable Architecture
+- Runtime Cepat
+- Tugas Async
+- Efisien
+- Skalabel
 
----
-
-# 🚀 Quick Start
-
-Clone repository:
+## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/Nexcorix/Nexcorix-Claw.git
-cd Nexcorix-Claw
-```
+git clone https://github.com/johansvaj/Cakar-Nexorix.git
 
-Install dependencies:
+cd Cakar-Nexorix
 
-```bash
 pip install -r requirements.txt
-```
 
-Run:
-
-```bash
 python main.py
 ```
 
----
+## 📦 Instalasi
 
-# 📦 Installation
-
-## Windows
+### Windows
 
 ```bash
-git clone https://github.com/Nexcorix/Nexcorix-Claw.git
+git clone https://github.com/johansvaj/Cakar-Nexorix.git
 
-cd Nexcorix-Claw
+cd Cakar-Nexorix
 
 python -m venv venv
 
@@ -125,12 +104,12 @@ pip install -r requirements.txt
 python main.py
 ```
 
-## Linux
+### Linux
 
 ```bash
-git clone https://github.com/Nexcorix/Nexcorix-Claw.git
+git clone https://github.com/johansvaj/Cakar-Nexorix.git
 
-cd Nexcorix-Claw
+cd Cakar-Nexorix
 
 python3 -m venv venv
 
@@ -141,12 +120,12 @@ pip install -r requirements.txt
 python3 main.py
 ```
 
-## macOS
+### macOS
 
 ```bash
-git clone https://github.com/Nexcorix/Nexcorix-Claw.git
+git clone https://github.com/johansvaj/Cakar-Nexorix.git
 
-cd Nexcorix-Claw
+cd Cakar-Nexorix
 
 python3 -m venv venv
 
@@ -157,49 +136,39 @@ pip install -r requirements.txt
 python3 main.py
 ```
 
----
+## 🎯 Penggunaan
 
-# 🎯 Usage
-
-Create Agent
+Buat Agen
 
 ```bash
 nexcorix create-agent
 ```
 
-Run Agent
+Jalankan Agen
 
 ```bash
 nexcorix run --agent coder
 ```
 
-List Agents
+Tampilkan Semua Agen
 
 ```bash
 nexcorix list-agents
 ```
 
-Memory Sync
+Sinkronisasi Memori
 
 ```bash
 nexcorix memory sync
 ```
 
-Memory Search
+Cari Memori
 
 ```bash
 nexcorix memory search "project"
 ```
 
-MCP Status
-
-```bash
-nexcorix mcp status
-```
-
----
-
-# 🧠 Architecture
+## 🧠 Arsitektur
 
 ```text
                            ⚡
@@ -228,38 +197,26 @@ nexcorix mcp status
                  🛠️ Tools    🌐 APIs
 ```
 
----
-
-# 📁 Project Structure
+## 📁 Struktur Proyek
 
 ```text
-Nexcorix-Claw/
+Cakar-Nexorix/
 │
-├── src/
-│   ├── agents/
-│   ├── memory/
-│   ├── mcp/
-│   ├── tools/
-│   ├── api/
-│   └── core/
-│
+├── agents/
+├── memory/
+├── tools/
 ├── plugins/
-├── configs/
 ├── docs/
-├── assets/
-│   ├── logo.png
-│   └── VID-20260609-WA0009.gif
-│
+├── logo.png
+├── VID-20260609-WA0009.gif
 ├── requirements.txt
 ├── main.py
 └── README.md
 ```
 
----
+## 🌐 Model yang Didukung
 
-# 🌐 Supported Models
-
-- OpenAI GPT
+- GPT
 - Claude
 - Gemini
 - DeepSeek
@@ -267,41 +224,19 @@ Nexcorix-Claw/
 - Ollama
 - Local Models
 
----
-
-# 📊 Feature Matrix
-
-| Feature | Supported |
-|----------|----------|
-| Multi-Agent | ✅ |
-| MCP | ✅ |
-| Memory | ✅ |
-| Plugins | ✅ |
-| Tools | ✅ |
-| API Access | ✅ |
-| Local Models | ✅ |
-| Cloud Runtime | 🚧 |
-| Mobile App | 🚧 |
-
----
-
-# 📈 Roadmap
+## 📈 Roadmap
 
 - [x] Core Runtime
-- [x] Agent System
+- [x] Multi-Agent
 - [x] Memory Engine
 - [x] MCP Integration
-- [x] Plugin Loader
+- [x] Plugin System
 - [ ] Visual Workflow Builder
 - [ ] Mobile Dashboard
-- [ ] Distributed Runtime
 - [ ] Cloud Platform
-- [ ] Team Collaboration
 - [ ] Marketplace
 
----
-
-# 🤝 Contributing
+## 🤝 Kontribusi
 
 ```bash
 fork
@@ -313,19 +248,15 @@ commit
 pull request
 ```
 
-Contributions, issues and feature requests are welcome.
+Kontribusi selalu diterima.
 
----
-
-# 📜 License
+## 📜 Lisensi
 
 MIT License
 
----
-
 <div align="center">
 
-## 🦂 NEXCORIX CLAW
+# 🦂 NEXCORIX CLAW
 
 ### Create • Automate • Innovate
 
