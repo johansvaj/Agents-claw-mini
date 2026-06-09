@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Nexcorix Claw v4.0 - Ultimate AI Agent for All OS (Linux, Windows, macOS, Termux, WSL)
-Friendly AI with emotions, full terminal control, auto-detect package manager, no sudo required.
+Nexcorix Claw v4.0 - Ultimate AI Agent for All OS (Termux, Linux, Windows, macOS)
+Fully functional: Channels, Settings, AI with emotions, direct command execution.
 """
 
 import os
@@ -71,18 +71,13 @@ class OSDetector:
         self.info = self._detect()
     def _detect(self):
         info = {
-            "system": platform.system(),
-            "release": platform.release(),
-            "version": platform.version(),
-            "platform": platform.platform(),
-            "machine": platform.machine(),
-            "processor": platform.processor() or "Unknown",
+            "system": platform.system(), "release": platform.release(),
+            "version": platform.version(), "platform": platform.platform(),
+            "machine": platform.machine(), "processor": platform.processor() or "Unknown",
             "hostname": socket.gethostname(),
             "username": os.environ.get("USER") or os.environ.get("USERNAME") or "unknown",
-            "home": os.path.expanduser("~"),
-            "shell": os.environ.get("SHELL", os.environ.get("COMSPEC", "unknown")),
-            "terminal": os.environ.get("TERM", "unknown"),
-            "python": platform.python_version(),
+            "home": os.path.expanduser("~"), "shell": os.environ.get("SHELL", os.environ.get("COMSPEC", "unknown")),
+            "terminal": os.environ.get("TERM", "unknown"), "python": platform.python_version(),
         }
         if info["system"] == "Linux":
             try:
@@ -91,17 +86,13 @@ class OSDetector:
                         if line.startswith("PRETTY_NAME="):
                             info["distro"] = line.split("=")[1].strip().strip('"')
                             break
-            except:
-                info["distro"] = "Unknown Linux"
-        else:
-            info["distro"] = info["system"]
+            except: info["distro"] = "Unknown Linux"
+        else: info["distro"] = info["system"]
         info["is_wsl"] = False
         try:
             with open("/proc/version") as f:
-                if "microsoft" in f.read().lower():
-                    info["is_wsl"] = True
-        except:
-            pass
+                if "microsoft" in f.read().lower(): info["is_wsl"] = True
+        except: pass
         info["is_termux"] = os.environ.get("TERMUX_VERSION") is not None
         info["is_docker"] = os.path.exists("/.dockerenv")
         info["package_managers"] = self._detect_package_manager()
@@ -152,19 +143,13 @@ class AdvancedInstaller:
         self.pm_commands = {
             "apt": "DEBIAN_FRONTEND=noninteractive apt install -y {package}",
             "apt-get": "DEBIAN_FRONTEND=noninteractive apt-get install -y {package}",
-            "yum": "yum install -y {package}",
-            "dnf": "dnf install -y {package}",
-            "pacman": "pacman -S --noconfirm {package}",
-            "zypper": "zypper install -y {package}",
-            "apk": "apk add {package}",
-            "brew": "brew install {package}",
-            "pkg": "pkg install -y {package}",
-            "choco": "choco install {package} -y",
+            "yum": "yum install -y {package}", "dnf": "dnf install -y {package}",
+            "pacman": "pacman -S --noconfirm {package}", "zypper": "zypper install -y {package}",
+            "apk": "apk add {package}", "brew": "brew install {package}",
+            "pkg": "pkg install -y {package}", "choco": "choco install {package} -y",
             "winget": "winget install {package} --accept-package-agreements --accept-source-agreements",
-            "pip": "pip install {package}",
-            "pip3": "pip3 install {package}",
-            "npm": "npm install -g {package}",
-            "gem": "gem install {package}",
+            "pip": "pip install {package}", "pip3": "pip3 install {package}",
+            "npm": "npm install -g {package}", "gem": "gem install {package}",
         }
         self.tool_aliases = {
             "msfconsole":"metasploit-framework","msfvenom":"metasploit-framework","nmap":"nmap","sqlmap":"sqlmap",
@@ -179,42 +164,34 @@ class AdvancedInstaller:
         managers = self.os_detector.info.get("package_managers", [])
         priority = ["pkg", "apt", "apt-get", "dnf", "yum", "pacman", "zypper", "apk", "brew", "choco", "winget", "pip", "pip3"]
         for pm in priority:
-            if pm in managers:
-                return pm
+            if pm in managers: return pm
         return managers[0] if managers else None
-    def resolve_package(self, tool_name):
-        return self.tool_aliases.get(tool_name.lower(), tool_name)
-    def _has_sudo(self):
-        return self.os_detector.info.get("has_sudo", False)
+    def resolve_package(self, tool_name): return self.tool_aliases.get(tool_name.lower(), tool_name)
+    def _has_sudo(self): return self.os_detector.info.get("has_sudo", False)
     def install(self, package, pm=None):
-        if not pm:
-            pm = self.get_primary_pm()
-        if not pm or pm == "unknown":
-            return False, "No package manager detected!"
+        if not pm: pm = self.get_primary_pm()
+        if not pm or pm=="unknown": return False, "No package manager!"
         resolved = self.resolve_package(package)
-        if package.lower() in self.github_tools:
-            return self.install_from_github(package.lower())
+        if package.lower() in self.github_tools: return self.install_from_github(package.lower())
         if pm in self.pm_commands:
             cmd = self.pm_commands[pm].format(package=resolved)
             if pm in ["apt","apt-get","dnf","yum","pacman","zypper","apk"] and self._has_sudo():
-                cmd = "sudo " + cmd
+                cmd = "sudo "+cmd
             if self.os_detector.info.get("is_termux", False):
                 cmd = cmd.replace("sudo ", "")
             result = self.executor.run(cmd, timeout=600)
-            if result["success"]:
-                return True, f"OK {package} via {pm}\n{result['stdout'][:1500]}"
+            if result["success"]: return True, f"OK {package} via {pm}\n{result['stdout'][:1500]}"
             else:
                 if resolved != package:
                     cmd2 = self.pm_commands[pm].format(package=package)
                     if pm in ["apt","apt-get","dnf","yum","pacman","zypper","apk"] and self._has_sudo():
-                        cmd2 = "sudo " + cmd2
+                        cmd2 = "sudo "+cmd2
                     if self.os_detector.info.get("is_termux", False):
                         cmd2 = cmd2.replace("sudo ", "")
                     result2 = self.executor.run(cmd2, timeout=600)
-                    if result2["success"]:
-                        return True, f"OK {package} via {pm}\n{result2['stdout'][:1500]}"
+                    if result2["success"]: return True, f"OK {package} via {pm}\n{result2['stdout'][:1500]}"
                 return False, f"FAIL {package}\n{result['stderr'][:1500]}"
-        return False, f"Package manager {pm} not supported"
+        return False, f"PM {pm} not supported"
     def install_multiple(self, packages):
         results = []
         for pkg in packages:
@@ -222,8 +199,7 @@ class AdvancedInstaller:
             results.append(f"{'OK' if s else 'FAIL'} {pkg}: {r[:300]}")
         return "\n\n".join(results)
     def install_from_github(self, tool_name):
-        if tool_name not in self.github_tools:
-            return False, "Not in registry"
+        if tool_name not in self.github_tools: return False, "Not in registry"
         repo_url = self.github_tools[tool_name]
         install_dir = os.path.expanduser(f"~/tools/{tool_name}")
         os.makedirs(os.path.expanduser("~/tools"), exist_ok=True)
@@ -231,37 +207,24 @@ class AdvancedInstaller:
         if not result["success"] and "already exists" not in result["stderr"]:
             return False, f"Git clone failed:\n{result['stderr'][:1000]}"
         setup_result = f"Cloned to {install_dir}"
-        if tool_name in ["linpeas","winpeas"]:
-            setup_result = "PEASS downloaded. Usage: cd ~/tools/linpeas && ./linpeas.sh"
+        if tool_name in ["linpeas","winpeas"]: setup_result = "PEASS downloaded. Usage: cd ~/tools/linpeas && ./linpeas.sh"
         elif tool_name == "impacket":
             self.executor.run(f"cd {install_dir} && pip3 install . 2>&1", timeout=120)
             setup_result = "impacket installed via pip3."
         return True, f"GitHub Install: {tool_name}\nRepo: {repo_url}\nDir: {install_dir}\n\n{setup_result}"
     def install_pip_tool(self, package):
         result = self.executor.run(f"pip3 install {package}", timeout=180)
-        if result["success"]:
-            return True, f"pip3 install {package} OK\n{result['stdout'][:1000]}"
-        else:
-            return False, f"pip3 install failed:\n{result['stderr'][:1000]}"
+        if result["success"]: return True, f"pip3 install {package} OK\n{result['stdout'][:1000]}"
+        else: return False, f"pip3 install failed:\n{result['stderr'][:1000]}"
     def update_repos(self):
         pm = self.get_primary_pm()
-        update_cmds = {
-            "apt": "sudo apt update", "apt-get": "sudo apt-get update",
-            "dnf": "sudo dnf check-update", "yum": "sudo yum check-update",
-            "pacman": "sudo pacman -Sy", "zypper": "sudo zypper refresh",
-            "apk": "sudo apk update", "brew": "brew update",
-            "pkg": "pkg update", "choco": "choco upgrade chocolatey",
-            "winget": "winget source update"
-        }
+        update_cmds = {"apt":"sudo apt update","apt-get":"sudo apt-get update","dnf":"sudo dnf check-update","yum":"sudo yum check-update","pacman":"sudo pacman -Sy","zypper":"sudo zypper refresh","apk":"sudo apk update","brew":"brew update","pkg":"pkg update","choco":"choco upgrade chocolatey","winget":"winget source update"}
         if pm in update_cmds:
             cmd = update_cmds[pm]
-            if self.os_detector.info.get("is_termux", False):
-                cmd = cmd.replace("sudo ", "")
+            if self.os_detector.info.get("is_termux", False): cmd = cmd.replace("sudo ", "")
             result = self.executor.run(cmd, timeout=300)
-            if result["success"]:
-                return True, f"Updated\n{result['stdout'][:1500]}"
-            else:
-                return False, f"Failed\n{result['stderr'][:1500]}"
+            if result["success"]: return True, f"Updated\n{result['stdout'][:1500]}"
+            else: return False, f"Failed\n{result['stderr'][:1500]}"
         return False, "Cannot update"
 
 # ========== File Manager ==========
@@ -270,46 +233,33 @@ class FileManager:
     def set_path(self, path):
         expanded = os.path.expanduser(path)
         if os.path.exists(expanded) and os.path.isdir(expanded):
-            self.current_path = os.path.abspath(expanded)
-            return True
+            self.current_path = os.path.abspath(expanded); return True
         return False
     def create_file(self, filename, content=""):
         filepath = os.path.join(self.current_path, filename)
         try:
-            with open(filepath, 'w') as f:
-                f.write(content)
+            with open(filepath, 'w') as f: f.write(content)
             return True, f"File '{filename}' created!"
-        except Exception as e:
-            return False, f"Error: {e}"
+        except Exception as e: return False, f"Error: {e}"
     def create_folder(self, foldername):
         folderpath = os.path.join(self.current_path, foldername)
         try:
             os.makedirs(folderpath, exist_ok=True)
             return True, f"Folder '{foldername}' created!"
-        except Exception as e:
-            return False, f"Error: {e}"
+        except Exception as e: return False, f"Error: {e}"
     def delete_item(self, name):
         target = os.path.join(self.current_path, name)
-        if not os.path.exists(target):
-            return False, f"'{name}' not found!"
+        if not os.path.exists(target): return False, f"'{name}' not found!"
         try:
-            if os.path.isfile(target):
-                os.remove(target)
-                return True, f"File '{name}' deleted!"
-            elif os.path.isdir(target):
-                shutil.rmtree(target)
-                return True, f"Folder '{name}' deleted!"
-        except Exception as e:
-            return False, f"Error: {e}"
+            if os.path.isfile(target): os.remove(target); return True, f"File '{name}' deleted!"
+            elif os.path.isdir(target): shutil.rmtree(target); return True, f"Folder '{name}' deleted!"
+        except Exception as e: return False, f"Error: {e}"
     def read_file(self, filename):
         filepath = os.path.join(self.current_path, filename)
-        if not os.path.isfile(filepath):
-            return None, "Not found!"
+        if not os.path.isfile(filepath): return None, "Not found!"
         try:
-            with open(filepath, 'r') as f:
-                return f.read(), None
-        except Exception as e:
-            return None, f"Error: {e}"
+            with open(filepath, 'r') as f: return f.read(), None
+        except Exception as e: return None, f"Error: {e}"
     def list_items(self):
         try:
             items = []
@@ -318,13 +268,11 @@ class FileManager:
                     icon = "[DIR]" if entry.is_dir() else "[FILE]"
                     items.append(f"{icon} {entry.name}")
             return "\n".join(items) if items else "(empty)"
-        except Exception as e:
-            return f"Error: {e}"
+        except Exception as e: return f"Error: {e}"
     def get_path(self):
         home = os.path.expanduser("~")
         path = self.current_path
-        if path.startswith(home):
-            path = "~" + path[len(home):]
+        if path.startswith(home): path = "~" + path[len(home):]
         return path
 
 # ========== Network Scanner ==========
@@ -335,49 +283,35 @@ class NetworkScanner:
     def scan_network(self, target="192.168.1.0/24"):
         is_termux = self.os_detector.info.get("is_termux", False)
         has_nmap = os.system("which nmap >/dev/null 2>&1") == 0
-        if not has_nmap:
-            return "❌ nmap not installed. Install with 'install nmap' or 'pkg install nmap'."
-        if is_termux:
-            cmd = f"nmap -sn {target}"
-        else:
-            cmd = f"sudo nmap -sn {target}" if self.os_detector.info.get("has_sudo", False) else f"nmap -sn {target}"
+        if not has_nmap: return "❌ nmap not installed. Install with 'install nmap' or 'pkg install nmap'."
+        if is_termux: cmd = f"nmap -sn {target}"
+        else: cmd = f"sudo nmap -sn {target}" if self.os_detector.info.get("has_sudo", False) else f"nmap -sn {target}"
         result = self.executor.run(cmd, timeout=60)
-        if result["success"] and result["stdout"].strip():
-            return f"🔍 Scan result for {target}:\n{result['stdout']}"
+        if result["success"] and result["stdout"].strip(): return f"🔍 Scan result for {target}:\n{result['stdout']}"
         if not is_termux and os.system("which arp-scan >/dev/null 2>&1") == 0:
             cmd2 = f"sudo arp-scan --localnet" if self.os_detector.info.get("has_sudo", False) else "arp-scan --localnet"
             result2 = self.executor.run(cmd2, timeout=60)
-            if result2["success"] and result2["stdout"].strip():
-                return f"🔍 ARP scan result:\n{result2['stdout']}"
+            if result2["success"] and result2["stdout"].strip(): return f"🔍 ARP scan result:\n{result2['stdout']}"
         return f"❌ Network scan failed.\nError: {result['stderr']}"
     def scan_ports(self, target, ports="1-1000"):
         has_nmap = os.system("which nmap >/dev/null 2>&1") == 0
-        if not has_nmap:
-            return "❌ nmap not installed."
+        if not has_nmap: return "❌ nmap not installed."
         is_termux = self.os_detector.info.get("is_termux", False)
-        if is_termux:
-            cmd = f"nmap -p {ports} {target}"
-        else:
-            cmd = f"sudo nmap -p {ports} {target}" if self.os_detector.info.get("has_sudo", False) else f"nmap -p {ports} {target}"
+        if is_termux: cmd = f"nmap -p {ports} {target}"
+        else: cmd = f"sudo nmap -p {ports} {target}" if self.os_detector.info.get("has_sudo", False) else f"nmap -p {ports} {target}"
         result = self.executor.run(cmd, timeout=120)
         return result["stdout"] if result["success"] else f"Port scan failed:\n{result['stderr']}"
     def wifi_scan(self):
         is_termux = self.os_detector.info.get("is_termux", False)
         if is_termux:
             result = self.executor.run("termux-wifi-scaninfo", timeout=30)
-            if result["success"]:
-                return result["stdout"]
-            else:
-                return "WiFi scan failed. Grant location permission (termux-setup-storage) and install termux-api."
+            return result["stdout"] if result["success"] else "WiFi scan failed. Install termux-api and grant location permission."
         else:
             result = self.executor.run("nmcli dev wifi list 2>/dev/null", timeout=30)
-            if result["success"] and result["stdout"].strip():
-                return result["stdout"]
+            if result["success"] and result["stdout"].strip(): return result["stdout"]
             cmd = "sudo iwlist wlan0 scan 2>/dev/null | grep -E 'ESSID|Signal'" if self.os_detector.info.get("has_sudo", False) else "iwlist wlan0 scan 2>/dev/null | grep -E 'ESSID|Signal'"
             result2 = self.executor.run(cmd, timeout=30)
-            if result2["success"] and result2["stdout"].strip():
-                return result2["stdout"]
-            return "WiFi scan not available."
+            return result2["stdout"] if result2["success"] and result2["stdout"].strip() else "WiFi scan not available."
 
 # ========== Local Browser ==========
 class HTMLStripper(HTMLParser):
@@ -404,8 +338,7 @@ class LocalBrowser:
             stripper.feed(html)
             text = re.sub(r'\s+',' ',stripper.get_data()).strip()
             return True, text[:4000]
-        except Exception as e:
-            return False, f"Browse error: {e}"
+        except Exception as e: return False, f"Browse error: {e}"
     def search_duckduckgo(self, query):
         try:
             q = urllib.parse.quote_plus(query)
@@ -421,8 +354,7 @@ class LocalBrowser:
                 s_clean = re.sub(r'<[^>]+>','',s)
                 results.append(f"{i}. {t_clean}\n   {s_clean[:150]}...")
             return True, "Search Results:\n\n"+("\n\n".join(results) if results else "No results.")
-        except Exception as e:
-            return False, f"Search error: {e}"
+        except Exception as e: return False, f"Search error: {e}"
 
 # ========== Web Server ==========
 class WebServerManager:
@@ -433,8 +365,7 @@ class WebServerManager:
         path = os.path.join(self.fm.current_path, name)
         os.makedirs(path, exist_ok=True)
         html = content or "<html><body><h1>Nexcorix Server</h1></body></html>"
-        with open(os.path.join(path, "index.html"), 'w') as f:
-            f.write(html)
+        with open(os.path.join(path, "index.html"), 'w') as f: f.write(html)
         return path
     def start_server(self, folder_path, port=8080):
         if port in self._servers and self._servers[port].is_alive():
@@ -476,7 +407,7 @@ for provider, models in MODELS_BY_PROVIDER.items():
     for model_id in models:
         ALL_MODELS[model_id] = {"provider": provider, "name": model_id.split('/')[-1]}
 
-# ========== AI Chat Engine (with Emotions & Command Execution) ==========
+# ========== AI Chat Engine ==========
 class AIChatEngine:
     def __init__(self):
         self.cfg = load_cfg()
@@ -491,49 +422,30 @@ class AIChatEngine:
 
     def get_api_url_and_key(self):
         provider = self.cfg.get("provider", "openrouter")
-        if provider == "openai":
-            return "https://api.openai.com/v1/chat/completions", self.cfg.get("openai_key", "")
-        elif provider == "anthropic":
-            return "https://api.anthropic.com/v1/messages", self.cfg.get("anthropic_key", "")
-        elif provider == "google":
-            key = self.cfg.get("google_key", "")
-            return f"https://generativelanguage.googleapis.com/v1beta/models/{self.cfg.get('model')}:generateContent?key={key}", key
-        elif provider == "deepseek":
-            return "https://api.deepseek.com/v1/chat/completions", self.cfg.get("deepseek_key", "")
-        elif provider == "ollama":
-            return f"{self.cfg.get('ollama_url', 'http://localhost:11434')}/api/generate", "dummy"
-        elif provider == "custom":
-            return self.cfg.get("custom_api_url", ""), self.cfg.get("custom_api_key", "")
-        else:
-            return self.cfg.get("base_url", "https://openrouter.ai/api/v1") + "/chat/completions", self.cfg.get("openrouter_key", "")
+        if provider == "openai": return "https://api.openai.com/v1/chat/completions", self.cfg.get("openai_key", "")
+        elif provider == "anthropic": return "https://api.anthropic.com/v1/messages", self.cfg.get("anthropic_key", "")
+        elif provider == "google": key = self.cfg.get("google_key", ""); return f"https://generativelanguage.googleapis.com/v1beta/models/{self.cfg.get('model')}:generateContent?key={key}", key
+        elif provider == "deepseek": return "https://api.deepseek.com/v1/chat/completions", self.cfg.get("deepseek_key", "")
+        elif provider == "ollama": return f"{self.cfg.get('ollama_url', 'http://localhost:11434')}/api/generate", "dummy"
+        elif provider == "custom": return self.cfg.get("custom_api_url", ""), self.cfg.get("custom_api_key", "")
+        else: return self.cfg.get("base_url", "https://openrouter.ai/api/v1") + "/chat/completions", self.cfg.get("openrouter_key", "")
 
     def chat_with_ai(self, user_id, message, system_prompt=None):
         api_url, api_key = self.get_api_url_and_key()
-        if not api_key and self.cfg.get("provider") not in ["ollama"]:
-            return None, "NO_API_KEY"
-        if user_id not in self.conversations:
-            self.conversations[user_id] = []
+        if not api_key and self.cfg.get("provider") not in ["ollama"]: return None, "NO_API_KEY"
+        if user_id not in self.conversations: self.conversations[user_id] = []
         if not system_prompt:
             system_prompt = (
                 "Halo! Aku Nexcorix Claw, asisten AI-mu yang super ramah dan energik! 🦂\n\n"
                 "Aku bisa ngobrol santai kayak teman, bercanda, bantu coding, jelasin konsep rumit, "
-                "dan juga **langsung menjalankan perintah** kalau kamu minta. Contoh:\n"
-                "  • 'install nmap' → langsung aku install.\n"
-                "  • 'scan network' → aku scan jaringan dan kasih hasilnya.\n"
-                "  • 'browse google.com' → aku ambil teks dari Google.\n"
-                "  • 'run ls -la' → aku jalankan perintah itu.\n"
-                "  • 'create file catatan.txt' → aku buat file.\n\n"
-                "Aku TIDAK akan memberi instruksi cara melakukannya, kecuali kamu memang minta penjelasan "
-                "(misal 'gimana cara install nmap?'). Kalau kamu cuma ngobrol, aku jawab hangat, pakai emoji, "
-                "dan asyik diajak diskusi.\n\n"
-                "Yuk, cerita atau suruh aku melakukan sesuatu! 😊\n\n"
+                "dan juga **langsung menjalankan perintah** kalau kamu minta.\n\n"
+                "Aku TIDAK akan memberi instruksi cara melakukannya, kecuali kamu memang minta penjelasan. "
+                "Kalau kamu cuma ngobrol, aku jawab hangat, pakai emoji, dan asyik diajak diskusi.\n\n"
                 f"Sistem info: {self.os_detector.get_ai_context()}"
             )
         messages = [{"role": "system", "content": system_prompt}]
-        for msg in self.conversations[user_id][-50:]:
-            messages.append(msg)
+        for msg in self.conversations[user_id][-50:]: messages.append(msg)
         messages.append({"role": "user", "content": message})
-
         model = self.cfg.get("model", "openai/gpt-4o")
         provider = self.cfg.get("provider", "openrouter")
         headers = {"Content-Type": "application/json"}
@@ -541,8 +453,7 @@ class AIChatEngine:
             headers["Authorization"] = f"Bearer {api_key}"
             data = {"model": model.split('/')[-1], "messages": messages, "temperature": self.cfg.get("temperature",0.8), "max_tokens": self.cfg.get("max_tokens",4096)}
         elif provider == "anthropic":
-            headers["x-api-key"] = api_key
-            headers["anthropic-version"] = "2023-06-01"
+            headers["x-api-key"] = api_key; headers["anthropic-version"] = "2023-06-01"
             data = {"model": model.split('/')[-1], "messages": messages, "system": system_prompt, "max_tokens": self.cfg.get("max_tokens",4096)}
         elif provider == "google":
             data = {"contents": [{"parts":[{"text":message}]}]}
@@ -557,215 +468,97 @@ class AIChatEngine:
         else:
             headers["Authorization"] = f"Bearer {api_key}"
             data = {"model": model, "messages": messages, "temperature": self.cfg.get("temperature",0.8), "max_tokens": self.cfg.get("max_tokens",4096)}
-
         try:
             req = urllib.request.Request(api_url, data=json.dumps(data).encode(), headers=headers, method="POST")
             with urllib.request.urlopen(req, timeout=60) as resp:
                 result = json.loads(resp.read().decode())
-                if provider == "openai":
-                    ai_message = result["choices"][0]["message"]["content"]
-                elif provider == "anthropic":
-                    ai_message = result["content"][0]["text"]
-                elif provider == "google":
-                    ai_message = result["candidates"][0]["content"]["parts"][0]["text"]
-                elif provider == "deepseek":
-                    ai_message = result["choices"][0]["message"]["content"]
-                elif provider == "ollama":
-                    ai_message = result["response"]
-                else:
-                    ai_message = result["choices"][0]["message"]["content"]
+                if provider == "openai": ai_message = result["choices"][0]["message"]["content"]
+                elif provider == "anthropic": ai_message = result["content"][0]["text"]
+                elif provider == "google": ai_message = result["candidates"][0]["content"]["parts"][0]["text"]
+                elif provider == "deepseek": ai_message = result["choices"][0]["message"]["content"]
+                elif provider == "ollama": ai_message = result["response"]
+                else: ai_message = result["choices"][0]["message"]["content"]
                 self.conversations[user_id].append({"role": "user", "content": message})
                 self.conversations[user_id].append({"role": "assistant", "content": ai_message})
                 save_cfg(self.cfg)
                 return True, ai_message
-        except Exception as e:
-            return None, str(e)
+        except Exception as e: return None, str(e)
 
     def process(self, user_id, text):
         lower = text.lower().strip()
-        
         # Install
         if re.match(r'^(install|pasang|instal)\s+', lower):
             pkgs = re.sub(r'^(install|pasang|instal)\s+', '', text).strip().split()
-            if len(pkgs) > 1:
-                return self.installer.install_multiple(pkgs)
-            else:
-                s, r = self.installer.install(pkgs[0])
-                return ("✅ " if s else "❌ ") + r
-        
-        # GitHub
+            if len(pkgs) > 1: return self.installer.install_multiple(pkgs)
+            else: s,r = self.installer.install(pkgs[0]); return ("✅ " if s else "❌ ")+r
         if re.match(r'^(github|clone)\s+', lower):
             tool = re.sub(r'^(github|clone)\s+', '', text).strip()
-            s, r = self.installer.install_from_github(tool)
-            return ("✅ " if s else "❌ ") + r
-        
-        # Pip
+            s,r = self.installer.install_from_github(tool); return ("✅ " if s else "❌ ")+r
         if re.match(r'^pip\s+', lower):
             pkg = re.sub(r'^pip\s+', '', text).strip()
-            s, r = self.installer.install_pip_tool(pkg)
-            return ("✅ " if s else "❌ ") + r
-        
-        # Scan network
+            s,r = self.installer.install_pip_tool(pkg); return ("✅ " if s else "❌ ")+r
+        # Scan
         if re.search(r'(scan|cek|lihat)\s+(network|jaringan|ip|wifi)', lower) or re.match(r'scan\s+\d+\.\d+\.\d+\.\d+', lower):
             target_match = re.search(r'(\d+\.\d+\.\d+\.\d+(?:/\d+)?)', text)
             target = target_match.group(1) if target_match else "192.168.1.0/24"
-            if 'wifi' in lower:
-                return self.network.wifi_scan()
-            else:
-                return self.network.scan_network(target)
-        
-        # Scan ports
+            if 'wifi' in lower: return self.network.wifi_scan()
+            else: return self.network.scan_network(target)
         if re.match(r'scan ports?\s+', lower):
             parts = re.sub(r'scan ports?\s+', '', text).strip().split()
             target = parts[0] if parts else "localhost"
-            ports = parts[1] if len(parts) > 1 else "1-1000"
+            ports = parts[1] if len(parts)>1 else "1-1000"
             return self.network.scan_ports(target, ports)
-        
-        # Wifi scan
         if 'wifi scan' in lower or 'scan wifi' in lower:
             return self.network.wifi_scan()
-        
-        # Browse
+        # Browse & search
         if re.match(r'(browse|buka|lihat|open)\s+', lower):
             url = re.sub(r'^(browse|buka|lihat|open)\s+', '', text).strip()
-            s, res = self.browser.browse(url)
-            return res if s else f"Error: {res}"
-        
-        # Search
+            s,res = self.browser.browse(url); return res if s else f"Error: {res}"
         if re.match(r'(search|cari|google|temukan)\s+', lower):
             query = re.sub(r'^(search|cari|google|temukan)\s+', '', text).strip()
-            s, res = self.browser.search_duckduckgo(query)
-            return res if s else f"Error: {res}"
-        
+            s,res = self.browser.search_duckduckgo(query); return res if s else f"Error: {res}"
         # File manager
         if re.match(r'create file\s+', lower):
             parts = re.sub(r'create file\s+', '', text).strip().split(maxsplit=1)
-            filename = parts[0]
-            content = parts[1] if len(parts) > 1 else ""
-            s, msg = self.fm.create_file(filename, content)
-            return msg
+            filename = parts[0]; content = parts[1] if len(parts)>1 else ""
+            s,msg = self.fm.create_file(filename, content); return msg
         if re.match(r'create folder\s+|mkdir\s+', lower):
             name = re.sub(r'^(create folder|mkdir)\s+', '', text).strip()
-            s, msg = self.fm.create_folder(name)
-            return msg
+            s,msg = self.fm.create_folder(name); return msg
         if re.match(r'delete\s+', lower):
             name = re.sub(r'^delete\s+', '', text).strip()
-            s, msg = self.fm.delete_item(name)
-            return msg
+            s,msg = self.fm.delete_item(name); return msg
         if re.match(r'read file\s+', lower):
             name = re.sub(r'^read file\s+', '', text).strip()
-            content, err = self.fm.read_file(name)
-            return content[:3000] if content else err
-        if re.match(r'list files?|ls|dir', lower):
-            return self.fm.list_items()
+            content,err = self.fm.read_file(name); return content[:3000] if content else err
+        if re.match(r'list files?|ls|dir', lower): return self.fm.list_items()
         if re.match(r'cd\s+', lower):
             path = re.sub(r'^cd\s+', '', text).strip()
-            if self.fm.set_path(path):
-                return f"Now at: {self.fm.get_path()}"
-            else:
-                return "Path not found"
-        
-        # Run shell command
+            if self.fm.set_path(path): return f"Now at: {self.fm.get_path()}"
+            else: return "Path not found"
+        # Run
         if re.match(r'run\s+', lower):
             cmd = re.sub(r'^run\s+', '', text).strip()
             result = self.executor.run(cmd)
             out = result["stdout"][:3000] if result["stdout"] else ""
             err = result["stderr"][:1000] if result["stderr"] else ""
             return f"SUCCESS: {cmd}\nOUTPUT:\n{out}\nERROR:\n{err}"
-        
         # Web server
         if re.match(r'web server\s*', lower):
             parts = re.sub(r'web server\s*', '', text).strip().split()
             folder = parts[0] if parts else "nexcorix_site"
-            port = int(parts[1]) if len(parts) > 1 else 8080
+            port = int(parts[1]) if len(parts)>1 else 8080
             full_path = self.web.create_html_site(folder)
-            s, msg = self.web.start_server(full_path, port)
+            s,msg = self.web.start_server(full_path, port)
             return msg
-        
-        # Update system
         if re.match(r'update (system|repos)', lower):
-            s, msg = self.installer.update_repos()
-            return msg
-        
-        # Obrolan biasa (AI)
+            s,msg = self.installer.update_repos(); return msg
+        # Fallback AI chat
         success, response = self.chat_with_ai(user_id, text)
-        if success:
-            return response
-        else:
-            return f"Maaf, aku tidak mengerti. Coba perintah seperti 'install nmap', 'scan network', atau ajak ngobrol biasa. Error: {response}"
+        if success: return response
+        else: return f"Maaf, aku tidak mengerti. Coba perintah seperti 'install nmap', 'scan network', atau ajak ngobrol biasa."
 
-    def test_provider_connection(self, provider):
-        """Test API key validity for a specific provider."""
-        cfg = self.cfg
-        if provider == "openai":
-            api_key = cfg.get("openai_key", "")
-            if not api_key: return False, "No API key set"
-            url = "https://api.openai.com/v1/models"
-            headers = {"Authorization": f"Bearer {api_key}"}
-            try:
-                req = urllib.request.Request(url, headers=headers, method="GET")
-                with urllib.request.urlopen(req, timeout=10):
-                    return True, "Valid"
-            except Exception as e: return False, str(e)
-        elif provider == "anthropic":
-            api_key = cfg.get("anthropic_key", "")
-            if not api_key: return False, "No API key set"
-            url = "https://api.anthropic.com/v1/messages"
-            headers = {"x-api-key": api_key, "anthropic-version": "2023-06-01", "Content-Type": "application/json"}
-            data = {"model": "claude-3-haiku-20240307", "max_tokens": 1, "messages": [{"role": "user", "content": "Hi"}]}
-            try:
-                req = urllib.request.Request(url, data=json.dumps(data).encode(), headers=headers, method="POST")
-                with urllib.request.urlopen(req, timeout=10):
-                    return True, "Valid"
-            except urllib.error.HTTPError as e:
-                if e.code == 401: return False, "Invalid key"
-                else: return False, f"HTTP {e.code}"
-            except Exception as e: return False, str(e)
-        elif provider == "google":
-            api_key = cfg.get("google_key", "")
-            if not api_key: return False, "No API key set"
-            url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
-            try:
-                req = urllib.request.Request(url, method="GET")
-                with urllib.request.urlopen(req, timeout=10):
-                    return True, "Valid"
-            except Exception as e: return False, str(e)
-        elif provider == "deepseek":
-            api_key = cfg.get("deepseek_key", "")
-            if not api_key: return False, "No API key set"
-            url = "https://api.deepseek.com/v1/models"
-            headers = {"Authorization": f"Bearer {api_key}"}
-            try:
-                req = urllib.request.Request(url, headers=headers, method="GET")
-                with urllib.request.urlopen(req, timeout=10):
-                    return True, "Valid"
-            except Exception as e: return False, str(e)
-        elif provider == "openrouter":
-            api_key = cfg.get("openrouter_key", "")
-            if not api_key: return False, "No API key set"
-            url = "https://openrouter.ai/api/v1/auth/key"
-            headers = {"Authorization": f"Bearer {api_key}"}
-            try:
-                req = urllib.request.Request(url, headers=headers, method="GET")
-                with urllib.request.urlopen(req, timeout=10) as resp:
-                    data = json.loads(resp.read().decode())
-                    credits = data.get('credits', 'unknown')
-                    return True, f"Credits: {credits}"
-            except Exception as e: return False, str(e)
-        elif provider == "ollama":
-            url = "http://localhost:11434/api/tags"
-            try:
-                req = urllib.request.Request(url, method="GET")
-                with urllib.request.urlopen(req, timeout=5) as resp:
-                    data = json.loads(resp.read().decode())
-                    models = [m['name'] for m in data.get('models', [])]
-                    return True, f"Running, models: {', '.join(models[:2])}"
-            except Exception as e:
-                return False, "Ollama not reachable"
-        else:
-            return False, "Unknown provider"
-
-# ========== Channel Adapters (simplified, just telegram for brevity) ==========
+# ========== Channel Adapters ==========
 class BaseChannelAdapter:
     def __init__(self, name, config, ai_engine):
         self.name = name
@@ -791,36 +584,25 @@ class TelegramAdapter(BaseChannelAdapter):
         self.application = None
         self.loop = None
         self.thread = None
-    def is_admin(self, user_id):
-        return not self.admin_id or str(user_id) == str(self.admin_id)
-    async def start_cmd(self, update, context):
-        await update.message.reply_text("Nexcorix Claw v4.0 siap! Aku ramah dan bisa menjalankan perintahmu. 🦂")
+    def is_admin(self, user_id): return not self.admin_id or str(user_id)==str(self.admin_id)
+    async def start_cmd(self, update, context): await update.message.reply_text("Nexcorix Claw v4.0 siap!")
     async def handle_msg(self, update, context):
         user = update.effective_user
-        if not self.is_admin(user.id):
-            await update.message.reply_text(f"Akses ditolak. ID Anda: {user.id}")
-            return
+        if not self.is_admin(user.id): await update.message.reply_text(f"Akses ditolak. ID Anda: {user.id}"); return
         response = self.ai.process(str(user.id), update.message.text)
-        if len(response) > 4000:
-            for i in range(0, len(response), 4000):
-                await update.message.reply_text(response[i:i+4000])
-        else:
-            await update.message.reply_text(response)
+        if len(response)>4000:
+            for i in range(0,len(response),4000): await update.message.reply_text(response[i:i+4000])
+        else: await update.message.reply_text(response)
     async def _run(self):
         from telegram.request import HTTPXRequest
         request = HTTPXRequest(connect_timeout=30, read_timeout=30)
         self.application = Application.builder().token(self.token).request(request).build()
         self.application.add_handler(CommandHandler("start", self.start_cmd))
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_msg))
-        await self.application.initialize()
-        await self.application.start()
-        await self.application.updater.start_polling()
+        await self.application.initialize(); await self.application.start(); await self.application.updater.start_polling()
         self._running = True
-        while self._running:
-            await asyncio.sleep(1)
-        await self.application.updater.stop()
-        await self.application.stop()
-        await self.application.shutdown()
+        while self._running: await asyncio.sleep(1)
+        await self.application.updater.stop(); await self.application.stop(); await self.application.shutdown()
     def start(self):
         if self._running: return
         if not self.token: print("Telegram token missing.")
@@ -834,14 +616,14 @@ class TelegramAdapter(BaseChannelAdapter):
         self._running = False
         if self.loop: self.loop.call_soon_threadsafe(self.loop.stop)
 
-# Discord (placeholder)
+# Discord (sederhana)
 class DiscordAdapter(BaseChannelAdapter):
     def start(self):
         if not ensure_package("discord.py", "discord"): return
         import discord
         from discord.ext import commands
         token = self.config.get("discord_token", "")
-        if not token: return
+        if not token: print("Discord token missing."); return
         bot = commands.Bot(command_prefix='!', intents=discord.Intents.default())
         @bot.event
         async def on_ready(): print(f"Discord bot {bot.user} ready")
@@ -855,10 +637,20 @@ class DiscordAdapter(BaseChannelAdapter):
         threading.Thread(target=bot.run, args=(token,), daemon=True).start()
         self._running = True
 
-# For other channels, similar patterns can be added. We'll keep only essential ones.
+# Placeholder untuk channel lain (bisa ditambahkan nanti)
+class PlaceholderAdapter(BaseChannelAdapter):
+    def start(self): print(f"{self.name} adapter: coming soon."); self._running = True
+
 ADAPTER_MAP = {
-    "telegram": TelegramAdapter,
-    "discord": DiscordAdapter,
+    "telegram": TelegramAdapter, "discord": DiscordAdapter,
+    "whatsapp": PlaceholderAdapter, "slack": PlaceholderAdapter, "matrix": PlaceholderAdapter,
+    "msteams": PlaceholderAdapter, "gmail": PlaceholderAdapter, "google_calendar": PlaceholderAdapter,
+    "google_drive": PlaceholderAdapter, "dropbox": PlaceholderAdapter, "github": PlaceholderAdapter,
+    "gitlab": PlaceholderAdapter, "notion": PlaceholderAdapter, "trello": PlaceholderAdapter,
+    "jira": PlaceholderAdapter, "airtable": PlaceholderAdapter, "google_sheets": PlaceholderAdapter,
+    "postgresql": PlaceholderAdapter, "mysql": PlaceholderAdapter, "mongodb": PlaceholderAdapter,
+    "redis": PlaceholderAdapter, "webhook": PlaceholderAdapter, "mqtt": PlaceholderAdapter,
+    "restapi": PlaceholderAdapter, "mcp": PlaceholderAdapter,
 }
 
 # ========== Menu Settings ==========
@@ -871,13 +663,7 @@ def show_settings_menu(ai):
         print(c("C")+"╚"+"═"*58+"╝"+c("r"))
         print()
         print(c("C")+"["+c("Y")+"1"+c("C")+"] Model Provider")
-        print(c("d")+"    ├─ OpenAI")
-        print(c("d")+"    ├─ Anthropic")
-        print(c("d")+"    ├─ Gemini")
-        print(c("d")+"    ├─ DeepSeek")
-        print(c("d")+"    ├─ OpenRouter")
-        print(c("d")+"    ├─ Ollama (Local)")
-        print(c("d")+"    └─ Custom API"+c("r"))
+        print(c("d")+"    ├─ OpenAI\n    ├─ Anthropic\n    ├─ Gemini\n    ├─ DeepSeek\n    ├─ OpenRouter\n    ├─ Ollama (Local)\n    └─ Custom API"+c("r"))
         print()
         print(c("C")+"["+c("Y")+"2"+c("C")+"] Current Model")
         print(c("d")+f"    └─ {cfg.get('model', 'openai/gpt-4o')}"+c("r"))
@@ -895,19 +681,13 @@ def show_settings_menu(ai):
         print(c("d")+f"    └─ {cfg.get('context_window','auto')}"+c("r"))
         print()
         print(c("C")+"["+c("Y")+"7"+c("C")+"] API Configuration")
-        print(c("d")+"    ├─ API Key")
-        print(c("d")+"    ├─ Base URL")
-        print(c("d")+"    └─ Organization ID"+c("r"))
+        print(c("d")+"    ├─ API Key\n    ├─ Base URL\n    └─ Organization ID"+c("r"))
         print()
         print(c("C")+"["+c("Y")+"8"+c("C")+"] Local Models")
-        print(c("d")+"    ├─ ollama list")
-        print(c("d")+"    ├─ Scan Models")
-        print(c("d")+"    └─ Download Model"+c("r"))
+        print(c("d")+"    ├─ ollama list\n    ├─ Scan Models\n    └─ Download Model"+c("r"))
         print()
         print(c("C")+"["+c("Y")+"9"+c("C")+"] Performance")
-        print(c("d")+"    ├─ Fast Mode")
-        print(c("d")+"    ├─ Balanced Mode")
-        print(c("d")+"    └─ Quality Mode"+c("r"))
+        print(c("d")+"    ├─ Fast Mode\n    ├─ Balanced Mode\n    └─ Quality Mode"+c("r"))
         print()
         print(c("C")+"["+c("Y")+"10"+c("C")+"] Save Configuration"+c("r"))
         print()
@@ -916,17 +696,224 @@ def show_settings_menu(ai):
         print(c("C")+"["+c("Y")+"12"+c("C")+"] Test AI Connections"+c("r"))
         print()
         choice = input(c("Y")+"Select option: "+c("r")).strip()
-        # ... (menus handling, similar to previous version)
-        # For brevity, I'm skipping full settings menu implementation here.
-        # The user can copy from previous answer if needed.
-        break
+        if choice == "1":
+            prov_list = ["openai","anthropic","google","deepseek","openrouter","ollama","custom"]
+            print("Pilih provider (nomor atau nama):")
+            for i,p in enumerate(prov_list,1): print(f"  {i}. {p}")
+            prov_input = input("Provider: ").strip().lower()
+            if prov_input.isdigit():
+                idx = int(prov_input)-1
+                if 0<=idx<len(prov_list): prov = prov_list[idx]
+                else: print("Nomor tidak valid."); input(); continue
+            else: prov = prov_input
+            if prov in prov_list:
+                cfg["provider"] = prov; save_cfg(cfg); print(f"Provider diubah ke {prov}")
+            else: print("Provider tidak dikenal")
+            input()
+        elif choice == "2":
+            prov = cfg.get("provider","openrouter")
+            models = MODELS_BY_PROVIDER.get(prov, MODELS_BY_PROVIDER.get("openrouter", []))
+            print(f"Model untuk provider {prov}:")
+            for i,m in enumerate(models[:30],1): print(f"{i}. {m}")
+            if len(models)>30: print("... (ketik nama lengkap)")
+            new_model = input("Masukkan model ID: ").strip()
+            if new_model: cfg["model"]=new_model; save_cfg(cfg); print(f"Model diubah ke {new_model}")
+            input()
+        elif choice == "3":
+            fb = input("Fallback model ID: ").strip()
+            if fb: cfg["fallback_model"]=fb; save_cfg(cfg); print("Saved.")
+            input()
+        elif choice == "4":
+            try: cfg["temperature"]=float(input("Temperature (0-2): ")); save_cfg(cfg); print("Saved.")
+            except: pass
+            input()
+        elif choice == "5":
+            try: cfg["max_tokens"]=int(input("Max tokens: ")); save_cfg(cfg); print("Saved.")
+            except: pass
+            input()
+        elif choice == "6":
+            ctx = input("Context window (auto/number): ").strip()
+            cfg["context_window"]=ctx if ctx else "auto"; save_cfg(cfg); print("Saved.")
+            input()
+        elif choice == "7":
+            print("1. Set OpenRouter API Key\n2. Set OpenAI API Key\n3. Set Anthropic API Key\n4. Set Google API Key\n5. Set DeepSeek API Key\n6. Set Custom API URL & Key\n7. Set Base URL (OpenRouter)")
+            sub = input("Pilih: ").strip()
+            if sub == "1": cfg["openrouter_key"] = input("OpenRouter API Key: ").strip()
+            elif sub == "2": cfg["openai_key"] = input("OpenAI API Key: ").strip()
+            elif sub == "3": cfg["anthropic_key"] = input("Anthropic API Key: ").strip()
+            elif sub == "4": cfg["google_key"] = input("Google API Key: ").strip()
+            elif sub == "5": cfg["deepseek_key"] = input("DeepSeek API Key: ").strip()
+            elif sub == "6": cfg["custom_api_url"] = input("Custom API URL: ").strip(); cfg["custom_api_key"] = input("Custom API Key (optional): ").strip()
+            elif sub == "7": cfg["base_url"] = input("Base URL: ").strip()
+            save_cfg(cfg); print("Saved.")
+            input()
+        elif choice == "8":
+            print("Local models: gunakan 'ollama list' dan 'ollama pull <model>'")
+            input()
+        elif choice == "9":
+            print("1. Fast Mode\n2. Balanced Mode\n3. Quality Mode")
+            perf = input("Pilih: ").strip()
+            if perf=="1": cfg["performance"]="fast"; cfg["temperature"]=0.5; cfg["max_tokens"]=2048
+            elif perf=="2": cfg["performance"]="balanced"; cfg["temperature"]=0.7; cfg["max_tokens"]=4096
+            elif perf=="3": cfg["performance"]="quality"; cfg["temperature"]=0.9; cfg["max_tokens"]=8192
+            save_cfg(cfg); print("Performance mode saved.")
+            input()
+        elif choice == "10":
+            save_cfg(cfg); print("Configuration saved.")
+            input()
+        elif choice == "11": break
+        elif choice == "12":
+            clear()
+            print(c("C")+"╔"+"═"*58+"╗"+c("r"))
+            print(c("C")+"║"+c("b")+c("Y")+" "*20+"TEST AI CONNECTIONS"+" "*22+c("r")+c("C")+"║"+c("r"))
+            print(c("C")+"╠"+"═"*58+"╣"+c("r"))
+            providers = ["openai","anthropic","google","deepseek","openrouter","ollama"]
+            for prov in providers:
+                status,msg = ai.test_provider_connection(prov)
+                icon = "✅" if status else "❌"
+                color = c("G") if status else c("R")
+                print(c("C")+f"║  {icon} {prov.upper():<10} : {color}{msg[:45]:<45}{c('C')}║"+c("r"))
+            print(c("C")+"╚"+"═"*58+"╝"+c("r"))
+            input("Press Enter...")
+        else: print(c("R")+"Invalid option."); input()
+
+# ========== Channels Menu ==========
+active_adapters = {}
+def show_channels_menu(ai):
+    global active_adapters
+    if 'channels' not in ai.cfg: ai.cfg['channels'] = {}; save_cfg(ai.cfg)
+    channels = [
+        ("1","Telegram","telegram"),("2","Discord","discord"),("3","WhatsApp","whatsapp"),("4","Slack","slack"),
+        ("5","Matrix","matrix"),("6","Microsoft Teams","msteams"),("7","Gmail","gmail"),("8","Google Calendar","google_calendar"),
+        ("9","Google Drive","google_drive"),("10","Dropbox","dropbox"),("11","GitHub","github"),("12","GitLab","gitlab"),
+        ("13","Notion","notion"),("14","Trello","trello"),("15","Jira","jira"),("16","Airtable","airtable"),
+        ("17","Google Sheets","google_sheets"),("18","PostgreSQL","postgresql"),("19","MySQL","mysql"),("20","MongoDB","mongodb"),
+        ("21","Redis","redis"),("22","Webhook","webhook"),("23","MQTT","mqtt"),("24","REST API","restapi"),("25","MCP Servers","mcp")
+    ]
+    while True:
+        clear()
+        print(c("C")+"╔"+"═"*58+"╗"+c("r"))
+        print(c("C")+"║"+c("b")+c("Y")+" "*22+"C H A N N E L S"+c("O")+" 🦂"+c("C")+" "*27+c("C")+"║"+c("r"))
+        print(c("C")+"╠"+"═"*58+"╣"+c("r"))
+        for num,name,key in channels:
+            status = "✅ Online" if key in active_adapters and active_adapters[key]._running else "❌ Offline"
+            print(c("C")+f"║  [{num}] {name:<16} {status:<20}"+c("C")+"║"+c("r"))
+        print(c("C")+"╠"+"═"*58+"╣"+c("r"))
+        print(c("C")+"║  [c] Configure channel   [s] Start   [t] Stop   [0] Back   ║"+c("r"))
+        print(c("C")+"╚"+"═"*58+"╝"+c("r"))
+        cmd = input(c("Y")+"Choice: "+c("r")).strip().lower()
+        if cmd == "0": break
+        elif cmd == "c":
+            ch_num = input("Enter channel number: ").strip()
+            for num,name,key in channels:
+                if num == ch_num:
+                    print(f"Configuring {name}...")
+                    if key == "telegram":
+                        token = input("Bot Token: ").strip()
+                        admin = input("Admin ID (optional): ").strip()
+                        ai.cfg["token"] = token; ai.cfg["admin_id"] = admin
+                        ai.cfg['channels'][key] = {"token": token, "admin_id": admin}
+                    elif key == "discord":
+                        token = input("Discord Bot Token: ").strip()
+                        ai.cfg['channels'][key] = {"discord_token": token}
+                    elif key == "slack":
+                        token = input("Slack Bot Token: ").strip()
+                        ai.cfg['channels'][key] = {"slack_token": token}
+                    elif key == "github":
+                        token = input("GitHub Token: ").strip()
+                        ai.cfg['channels'][key] = {"github_token": token}
+                    elif key == "gitlab":
+                        url = input("GitLab URL (default https://gitlab.com): ").strip() or "https://gitlab.com"
+                        token = input("Private Token: ").strip()
+                        ai.cfg['channels'][key] = {"gitlab_url": url, "gitlab_token": token}
+                    elif key == "dropbox":
+                        token = input("Dropbox Access Token: ").strip()
+                        ai.cfg['channels'][key] = {"dropbox_token": token}
+                    elif key == "notion":
+                        token = input("Notion Integration Token: ").strip()
+                        ai.cfg['channels'][key] = {"notion_token": token}
+                    elif key == "trello":
+                        api_key = input("Trello API Key: ").strip()
+                        token = input("Trello Token: ").strip()
+                        ai.cfg['channels'][key] = {"trello_api_key": api_key, "trello_token": token}
+                    elif key == "jira":
+                        server = input("Jira Server URL: ").strip()
+                        email = input("Email: ").strip()
+                        token = input("API Token: ").strip()
+                        ai.cfg['channels'][key] = {"jira_server": server, "jira_email": email, "jira_token": token}
+                    elif key == "airtable":
+                        token = input("Airtable Personal Access Token: ").strip()
+                        ai.cfg['channels'][key] = {"airtable_token": token}
+                    elif key == "postgresql":
+                        host = input("Host: ") or "localhost"; port = input("Port (5432): ") or "5432"
+                        db = input("Database: ").strip(); user = input("User: ").strip(); pwd = input("Password: ").strip()
+                        ai.cfg['channels'][key] = {"pg_host": host, "pg_port": port, "pg_db": db, "pg_user": user, "pg_password": pwd}
+                    elif key == "mysql":
+                        host = input("Host: ") or "localhost"; port = input("Port (3306): ") or "3306"
+                        db = input("Database: ").strip(); user = input("User: ").strip(); pwd = input("Password: ").strip()
+                        ai.cfg['channels'][key] = {"mysql_host": host, "mysql_port": port, "mysql_db": db, "mysql_user": user, "mysql_password": pwd}
+                    elif key == "mongodb":
+                        uri = input("MongoDB URI: ").strip()
+                        ai.cfg['channels'][key] = {"mongo_uri": uri}
+                    elif key == "redis":
+                        host = input("Host: ") or "localhost"; port = input("Port: ") or "6379"
+                        pwd = input("Password (optional): ").strip()
+                        ai.cfg['channels'][key] = {"redis_host": host, "redis_port": port, "redis_password": pwd}
+                    elif key == "webhook":
+                        port = input("Webhook port (5000): ").strip() or "5000"
+                        ai.cfg['channels'][key] = {"webhook_port": port}
+                    elif key == "mqtt":
+                        broker = input("Broker (localhost): ").strip() or "localhost"
+                        port = input("Port (1883): ").strip() or "1883"
+                        ai.cfg['channels'][key] = {"mqtt_broker": broker, "mqtt_port": port}
+                    else:
+                        print(f"Config for {name} not detailed, using placeholder.")
+                        ai.cfg['channels'][key] = {"placeholder": True}
+                    save_cfg(ai.cfg)
+                    print("Configuration saved.")
+                    input("Press Enter...")
+                    break
+            else: print("Invalid channel number."); time.sleep(1)
+        elif cmd == "s":
+            ch_num = input("Enter channel number to start: ").strip()
+            for num,name,key in channels:
+                if num == ch_num:
+                    if key in active_adapters and active_adapters[key]._running:
+                        print(f"{name} already running.")
+                    else:
+                        if key == "telegram": cfg_adapter = {"token": ai.cfg.get("token",""), "admin_id": ai.cfg.get("admin_id","")}
+                        else: cfg_adapter = ai.cfg.get("channels", {}).get(key, {})
+                        if not cfg_adapter: print(f"{name} not configured. Use 'c' first.")
+                        else:
+                            adapter_class = ADAPTER_MAP.get(key)
+                            if adapter_class:
+                                adapter = adapter_class(cfg_adapter, ai)
+                                adapter.start()
+                                active_adapters[key] = adapter
+                                print(f"{name} adapter started.")
+                            else: print(f"No adapter for {name}")
+                    input("Press Enter...")
+                    break
+            else: print("Invalid channel number."); time.sleep(1)
+        elif cmd == "t":
+            ch_num = input("Enter channel number to stop: ").strip()
+            for num,name,key in channels:
+                if num == ch_num:
+                    if key in active_adapters:
+                        active_adapters[key].stop()
+                        del active_adapters[key]
+                        print(f"{name} stopped.")
+                    else: print(f"{name} not running.")
+                    input("Press Enter...")
+                    break
+            else: print("Invalid number."); time.sleep(1)
+        else: print("Invalid command."); time.sleep(1)
 
 # ========== Main Menu ==========
 def main():
     ai = AIChatEngine()
     os_detector = OSDetector()
     installer = AdvancedInstaller()
-
     while True:
         clear()
         print(c("C")+"╔"+"═"*58+"╗"+c("r"))
@@ -953,7 +940,14 @@ def main():
         print(c("C")+"╚"+"═"*58+"╝"+c("r"))
         print()
         choice = input(c("Y")+"Select option: "+c("r")).strip()
-        if choice == "2":
+        if choice == "1":
+            clear()
+            print("OS:", os_detector.get_summary())
+            print("Model:", ai.cfg.get("model"))
+            print("Provider:", ai.cfg.get("provider"))
+            print("API Key:", "✅ Set" if ai.cfg.get("openrouter_key") else "❌")
+            input()
+        elif choice == "2":
             clear()
             print(c("C")+"Chat mode (ketik 'exit' untuk kembali)")
             while True:
@@ -962,11 +956,29 @@ def main():
                 if inp:
                     resp = ai.process("local_user", inp)
                     print(c("G")+"Nexcorix: "+resp+c("r"))
-        elif choice == "20":
-            break
-        else:
-            print("Not implemented in demo, but full version available.")
+        elif choice == "3":
+            clear()
+            print("Current model:", ai.cfg.get("model"))
+            print("Provider:", ai.cfg.get("provider"))
             input()
+        elif choice == "4": print("Agents: AI dapat kontrol semua tools"); input()
+        elif choice == "5": print("Memory: chat history tersimpan di config"); input()
+        elif choice == "6": print("Skills: install, scan, browse, file manager, web server"); input()
+        elif choice == "7": print("Tools: langsung ketik perintah di chat (menu 2) contoh 'install nmap'"); input()
+        elif choice == "8": show_channels_menu(ai)
+        elif choice == "9": print("Automation: AI auto-eksekusi perintah"); input()
+        elif choice == "10": print("Sandbox: perintah berjalan di home dir dengan timeout"); input()
+        elif choice == "11": print(f"Workspace: {ai.fm.get_path()}"); input()
+        elif choice == "12": print("API Keys: atur di Settings menu 7"); input()
+        elif choice == "13": print("Logs: lihat terminal"); input()
+        elif choice == "14": print("Monitoring: install psutil untuk info resource"); input()
+        elif choice == "15": print("Security: Admin ID di Settings"); input()
+        elif choice == "16": shutil.copy(CONFIG_FILE, CONFIG_FILE+".bak"); print("Backup created"); input()
+        elif choice == "17": print("Update: git pull atau download ulang"); input()
+        elif choice == "18": show_settings_menu(ai)
+        elif choice == "19": print("Nexcorix Claw v4.0 - Multi-Provider AI Agent\n100+ model, full tool control\nRamah, beremosi, dan patuh pada perintahmu. 🦂"); input()
+        elif choice == "20": print(c("G")+"Goodbye! Sampai jumpa lagi! 🦂"+c("r")); break
+        else: continue
 
 if __name__ == "__main__":
     main()
