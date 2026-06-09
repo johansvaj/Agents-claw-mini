@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="./logo.png" width="180">
-
 # 🦂 NEXCORIX CLAW
 
 ### Next-Generation AI Agent Framework
