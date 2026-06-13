@@ -258,7 +258,7 @@ MIT License
 
 ### Create • Automate • Innovate
 
-Version 0.4.0
+Version 0.25
 
 Built For The Future
 
