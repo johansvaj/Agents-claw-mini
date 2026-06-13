@@ -1,0 +1,38 @@
+import os
+from pathlib import Path
+
+class WorkspaceV2:
+    def __init__(self, workspace_dir: str):
+        self.dir = Path(workspace_dir).expanduser()
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self._create_defaults()
+    def _create_defaults(self):
+        defaults = {
+            "AGENTS.md": "# Aturan\n- Langsung eksekusi\n- Gunakan tools\n",
+            "SOUL.md": "# Kepribadian\nTegas, ramah, paham teknologi\n",
+            "USER.md": "# Preferensi\nNama: User\nBahasa: Indonesia/English\n",
+            "MEMORY.md": "# Memori\n",
+            "TOOLS.md": "# Tools\nbash, read_file, write_file, mkdir, scan_network, install\n"
+        }
+        for name, content in defaults.items():
+            fp = self.dir / name
+            if not fp.exists():
+                fp.write_text(content)
+    def load_file(self, name: str) -> str:
+        fp = self.dir / name
+        return fp.read_text() if fp.exists() else ""
+    def write_to_memory(self, fact: str):
+        mem_file = self.dir / "MEMORY.md"
+        current = mem_file.read_text() if mem_file.exists() else "# Memori\n\n"
+        current += f"- {fact}\n"
+        mem_file.write_text(current)
+    def build_system_prompt(self) -> str:
+        parts = []
+        for f in ["AGENTS.md", "SOUL.md", "USER.md", "TOOLS.md"]:
+            content = self.load_file(f)
+            if content:
+                parts.append(f"# {f.replace('.md','')}\n{content}")
+        mem = self.load_file("MEMORY.md")
+        if mem and len(mem) > 50:
+            parts.append(f"# Memori\n{mem[:1500]}")
+        return "\n\n---\n\n".join(parts)
