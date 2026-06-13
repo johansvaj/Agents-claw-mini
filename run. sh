@@ -1,91 +1,116 @@
-#!/bin/bash
-# Nexcorix Claw - Auto Setup & Run Script (Deteksi OS, venv, install library hanya jika belum ada)
+#!/usr/bin/env bash
+# Nexcorix Claw - Universal Launcher v6.0 with Notifications
 
 set -e
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${GREEN}[*] Nexcorix Claw Setup Script${NC}"
+echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║   Nexcorix Claw Universal Launcher v6.0   ║${NC}"
+echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
 
-# Deteksi OS
-OS="$(uname -s)"
-case "$OS" in
-    Linux*)     OS_TYPE="Linux";;
-    Darwin*)    OS_TYPE="Mac";;
-    MINGW*|CYGWIN*|MSYS*) OS_TYPE="Windows";;
-    *)          OS_TYPE="Unknown";;
-esac
-echo -e "[+] Detected OS: $OS_TYPE"
-
-# Deteksi distro Linux
-DISTRO="unknown"
-if [ "$OS_TYPE" = "Linux" ] && [ -f /etc/os-release ]; then
-    . /etc/os-release
-    DISTRO="$ID"
-    echo -e "[+] Distribution: $DISTRO $VERSION_ID"
-fi
-
-# Cek Python3
-if ! command -v python3 &> /dev/null; then
-    echo -e "${RED}[-] Python3 not found. Please install Python 3.8+${NC}"
-    exit 1
-fi
-
-# Fungsi install apt package (Debian/Ubuntu/Kali)
-install_apt_pkg() {
-    local pkg="$1"
-    if ! dpkg -l | grep -q "^ii  $pkg "; then
-        echo -e "${YELLOW}[!] Installing $pkg via apt...${NC}"
-        sudo apt update && sudo apt install -y "$pkg"
+# ---------- 1. Deteksi Python ----------
+detect_python() {
+    if command -v python3 &>/dev/null; then
+        PYTHON_CMD="python3"
+    elif command -v python &>/dev/null; then
+        PYTHON_CMD="python"
     else
-        echo -e "[+] $pkg already installed"
+        echo -e "${RED}[ERROR] Python tidak ditemukan. Install Python 3.8+.${NC}"
+        exit 1
+    fi
+    
+    PY_MAJOR=$($PYTHON_CMD -c 'import sys; print(sys.version_info.major)')
+    PY_MINOR=$($PYTHON_CMD -c 'import sys; print(sys.version_info.minor)')
+    
+    if [ "$PY_MAJOR" -lt 3 ] || ( [ "$PY_MAJOR" -eq 3 ] && [ "$PY_MINOR" -lt 8 ] ); then
+        echo -e "${RED}[ERROR] Python $PY_MAJOR.$PY_MINOR < 3.8. Upgrade Python.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}[✓] Python $PY_MAJOR.$PY_MINOR ($PYTHON_CMD)${NC}"
+}
+
+# ---------- 2. Setup Virtual Environment ----------
+setup_venv() {
+    if [ ! -d "venv" ]; then
+        echo -e "${YELLOW}[i] Membuat virtual environment...${NC}"
+        $PYTHON_CMD -m venv venv
+        echo -e "${GREEN}[✓] Virtual environment dibuat.${NC}"
+    fi
+    # Aktivasi
+    if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
+        source venv/Scripts/activate
+    else
+        source venv/bin/activate
+    fi
+    echo -e "${GREEN}[✓] Virtual environment aktif (venv)${NC}"
+    PYTHON_CMD="python"
+}
+
+# ---------- 3. Install library dengan notifikasi ----------
+install_with_notify() {
+    local lib=$1
+    echo -e "${YELLOW}[⏳] Menginstall $lib...${NC}"
+    if $PYTHON_CMD -m pip install "$lib" --quiet; then
+        echo -e "${GREEN}[✅] $lib berhasil diinstall.${NC}"
+        return 0
+    else
+        echo -e "${RED}[❌] $lib gagal diinstall.${NC}"
+        return 1
     fi
 }
 
-# Pastikan venv module tersedia (khusus Linux dengan external management)
-if [ "$OS_TYPE" = "Linux" ] && [ "$DISTRO" = "kali" -o "$DISTRO" = "debian" -o "$DISTRO" = "ubuntu" ]; then
-    if ! python3 -c "import venv" &>/dev/null; then
-        echo -e "${YELLOW}[!] python3-venv not found, installing...${NC}"
-        install_apt_pkg python3-venv
-    fi
-fi
+install_libs() {
+    echo -e "${YELLOW}[i] Upgrade pip...${NC}"
+    $PYTHON_CMD -m pip install --upgrade pip > /dev/null 2>&1
+    echo -e "${GREEN}[✓] pip upgrade selesai.${NC}"
 
-# Buat virtual environment jika belum ada
-if [ ! -d "venv" ]; then
-    echo -e "${YELLOW}[!] Creating virtual environment...${NC}"
-    python3 -m venv venv
-    echo -e "${GREEN}[✓] Virtual environment created${NC}"
-else
-    echo -e "[+] Using existing virtual environment"
-fi
+    # Minimal libraries
+    MINIMAL=("requests" "urllib3")
+    for lib in "${MINIMAL[@]}"; do
+        install_with_notify "$lib"
+    done
 
-# Aktifkan venv
-source venv/bin/activate
-
-# Upgrade pip di venv
-pip install --upgrade pip >/dev/null 2>&1
-
-# Install dependencies hanya jika belum terinstall (cek via pip list)
-echo -e "[*] Checking required Python packages..."
-PACKAGES=("psutil" "python-telegram-bot" "discord.py" "slack-sdk" "matrix-nio" "google-api-python-client" "dropbox" "PyGithub" "python-gitlab" "notion-client" "py-trello" "jira" "pyairtable" "psycopg2-binary" "mysql-connector-python" "pymongo" "redis" "paho-mqtt" "pywhatsapp")
-for pkg in "${PACKAGES[@]}"; do
-    if pip show "$pkg" &>/dev/null; then
-        echo -e "[+] $pkg already installed"
+    echo ""
+    echo -e "${YELLOW}Install library advanced untuk fitur penuh? (chromadb, fastapi, dll) [y/N]:${NC}"
+    read -r answer
+    if [[ "$answer" =~ ^[Yy]$ ]]; then
+        ADVANCED=(
+            "chromadb"
+            "sentence-transformers"
+            "fastapi"
+            "uvicorn"
+            "python-telegram-bot"
+            "discord.py"
+            "schedule"
+            "pyyaml"
+            "sqlite-utils"
+        )
+        for lib in "${ADVANCED[@]}"; do
+            install_with_notify "$lib"
+        done
+        echo -e "${GREEN}[✓] Semua library advanced telah diproses.${NC}"
     else
-        echo -e "${YELLOW}[!] Installing $pkg...${NC}"
-        pip install "$pkg"
+        echo -e "${GREEN}[i] Lewati install library advanced.${NC}"
     fi
-done
+}
 
-# Jalankan program
-echo -e "${GREEN}[✓] Starting Nexcorix Claw...${NC}"
-python3 nexcorix_claw.py
+# ---------- 4. Jalankan program ----------
+run_claw() {
+    if [ ! -f "nexcorix_claw.py" ]; then
+        echo -e "${RED}[ERROR] File nexcorix_claw.py tidak ditemukan.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}[✓] Menjalankan Nexcorix Claw...${NC}"
+    $PYTHON_CMD nexcorix_claw.py
+}
 
-# Deaktivasi venv setelah program selesai
-deactivate
+# ---------- Main ----------
+detect_python
+setup_venv
+install_libs
+run_claw
